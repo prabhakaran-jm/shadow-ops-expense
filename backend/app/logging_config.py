@@ -1,43 +1,37 @@
-"""Structured logging configuration for Shadow Ops backend."""
+"""Structured logging configuration for Shadow Ops backend.
+
+Integrates structlog with stdlib logging so uvicorn (and other stdlib loggers)
+work with ProcessorFormatter and the extra= kwarg is handled via ExtraAdder.
+"""
 
 import logging
 import sys
-from typing import Any
 
 import structlog
 from structlog.types import Processor
 
 from app.config import settings
 
-try:
-    _merge_contextvars = structlog.contextvars.merge_contextvars
-except AttributeError:
-    _merge_contextvars = None
-
 
 def setup_logging() -> None:
-    """Configure structured logging with structlog."""
+    """Configure structlog with stdlib logging integration."""
     log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
 
     shared_processors: list[Processor] = [
         structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.stdlib.ExtraAdder(),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.TimeStamper(fmt="iso"),
     ]
-    if _merge_contextvars is not None:
-        shared_processors.insert(0, _merge_contextvars)
-
-    if sys.stderr.isatty():
-        shared_processors.append(structlog.dev.ConsoleRenderer(colors=True))
-    else:
-        shared_processors.append(structlog.processors.JSONRenderer())
 
     structlog.configure(
-        processors=shared_processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        processors=shared_processors + [
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 
@@ -45,21 +39,26 @@ def setup_logging() -> None:
         foreign_pre_chain=shared_processors,
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            structlog.processors.JSONRenderer() if not sys.stderr.isatty() else structlog.dev.ConsoleRenderer(colors=True),
+            structlog.dev.ConsoleRenderer(colors=True)
+            if sys.stderr.isatty()
+            else structlog.processors.JSONRenderer(),
         ],
     )
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
     root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
+    root_logger.handlers = [handler]
     root_logger.setLevel(log_level)
 
-    for name in ("uvicorn", "uvicorn.error"):
-        logging.getLogger(name).handlers = [handler]
-        logging.getLogger(name).setLevel(log_level)
+    # Route uvicorn loggers through root so all logs use ProcessorFormatter.
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        logger = logging.getLogger(name)
+        logger.handlers = []
+        logger.setLevel(log_level)
+        logger.propagate = True
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
-    """Return a structured logger for the given module name."""
+    """Return a stdlib-compatible structlog logger for the given name."""
     return structlog.get_logger(name)
