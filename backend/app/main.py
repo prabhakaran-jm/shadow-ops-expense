@@ -1,0 +1,50 @@
+"""Shadow Ops – Expense Report Shadow – FastAPI application entrypoint."""
+
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes import router
+from app.config import settings
+from app.logging_config import get_logger, setup_logging
+
+setup_logging()
+logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Startup and shutdown lifecycle."""
+    logger.info("application_startup", debug=settings.debug)
+    yield
+    logger.info("application_shutdown")
+
+
+app = FastAPI(
+    title="Shadow Ops – Expense Report Shadow",
+    description="AI-powered expense workflow inference and agent execution (Nova 2 Lite & Nova Act).",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(router)
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    """Root redirect/info."""
+    return {
+        "service": "Shadow Ops – Expense Report Shadow",
+        "docs": "/docs",
+        "health": "/api/health",
+    }
