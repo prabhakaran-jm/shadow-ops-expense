@@ -16,6 +16,11 @@ def sessions_dir() -> Path:
     return _project_root() / "demo" / "sessions"
 
 
+def workflows_dir() -> Path:
+    """Directory for persisted inferred workflows: demo/workflows."""
+    return _project_root() / "demo" / "workflows"
+
+
 def ensure_dir(path: Path) -> None:
     """Create directory and parents if they do not exist."""
     path.mkdir(parents=True, exist_ok=True)

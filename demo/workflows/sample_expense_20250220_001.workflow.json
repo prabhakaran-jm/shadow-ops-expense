@@ -1,0 +1,90 @@
+{
+  "session_id": "sample_expense_20250220_001",
+  "title": "Submit expense (inferred)",
+  "description": "Creates a new expense, uploads receipt, fills amount, date, category and description, then submits and confirms. Inferred from capture session.",
+  "parameters": [
+    {
+      "name": "amount",
+      "type": "number",
+      "required": true,
+      "example": "125.50"
+    },
+    {
+      "name": "date",
+      "type": "date",
+      "required": true,
+      "example": "2025-02-20"
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "required": true,
+      "example": "Travel"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "example": "Client meeting"
+    },
+    {
+      "name": "receipt_file",
+      "type": "string",
+      "required": true,
+      "example": "receipt.pdf"
+    }
+  ],
+  "steps": [
+    {
+      "order": 1,
+      "intent": "navigate",
+      "instruction": "Navigate to the expense application entry URL",
+      "selector_hint": null,
+      "uses_parameters": []
+    },
+    {
+      "order": 2,
+      "intent": "open_form",
+      "instruction": "Open the new expense form (e.g. click 'New expense')",
+      "selector_hint": null,
+      "uses_parameters": []
+    },
+    {
+      "order": 3,
+      "intent": "upload_receipt",
+      "instruction": "Upload or attach the receipt file",
+      "selector_hint": null,
+      "uses_parameters": [
+        "receipt_file"
+      ]
+    },
+    {
+      "order": 4,
+      "intent": "fill_field",
+      "instruction": "Fill amount, date, category, and description fields",
+      "selector_hint": null,
+      "uses_parameters": [
+        "amount",
+        "date",
+        "category",
+        "description"
+      ]
+    },
+    {
+      "order": 5,
+      "intent": "submit_form",
+      "instruction": "Submit the expense form",
+      "selector_hint": null,
+      "uses_parameters": []
+    },
+    {
+      "order": 6,
+      "intent": "confirmation",
+      "instruction": "Confirm submission if a confirmation step is shown",
+      "selector_hint": null,
+      "uses_parameters": []
+    }
+  ],
+  "risk_level": "low",
+  "time_saved_minutes": 5
+}

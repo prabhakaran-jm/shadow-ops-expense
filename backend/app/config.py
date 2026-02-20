@@ -31,5 +31,8 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Inference: mock (deterministic from session) or real (Nova 2 Lite)
+    nova_mode: str = "mock"
+
 
 settings = Settings()
