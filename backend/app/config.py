@@ -33,6 +33,10 @@ class Settings(BaseSettings):
 
     # Inference: mock (deterministic from session) or real (Nova 2 Lite)
     nova_mode: str = "mock"
+    # AWS / Bedrock (real mode)
+    aws_region: str = "us-east-1"
+    # Use inference profile ID for on-demand invocation (foundation ID not supported for on-demand)
+    nova_model_id_lite: str = "us.amazon.nova-2-lite-v1:0"  # env NOVA_MODEL_ID_LITE
 
 
 settings = Settings()

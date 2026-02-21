@@ -1,19 +1,13 @@
 {
   "session_id": "sample_expense_20250220_001",
-  "title": "Submit expense (inferred)",
-  "description": "Creates a new expense, uploads receipt, fills amount, date, category and description, then submits and confirms. Inferred from capture session.",
+  "title": "Submit Expense with Receipt",
+  "description": "Automates creating a new expense report, attaching a receipt, filling in required details, and submitting for approval. Use this workflow when you need to submit a standard business expense.",
   "parameters": [
     {
       "name": "amount",
       "type": "number",
       "required": true,
-      "example": "125.50"
-    },
-    {
-      "name": "date",
-      "type": "date",
-      "required": true,
-      "example": "2025-02-20"
+      "example": "45.50"
     },
     {
       "name": "category",
@@ -22,69 +16,135 @@
       "example": "Travel"
     },
     {
-      "name": "description",
+      "name": "date",
+      "type": "date",
+      "required": true,
+      "example": "2025-02-20"
+    },
+    {
+      "name": "merchant",
+      "type": "string",
+      "required": true,
+      "example": "Hotel ABC"
+    },
+    {
+      "name": "notes",
       "type": "string",
       "required": false,
-      "example": "Client meeting"
+      "example": "Breakfast included"
     },
     {
       "name": "receipt_file",
       "type": "string",
       "required": true,
-      "example": "receipt.pdf"
+      "example": "/receipts/receipt123.pdf"
     }
   ],
   "steps": [
     {
       "order": 1,
       "intent": "navigate",
-      "instruction": "Navigate to the expense application entry URL",
+      "instruction": "Open the expense app and navigate to the dashboard",
       "selector_hint": null,
       "uses_parameters": []
     },
     {
       "order": 2,
-      "intent": "open_form",
-      "instruction": "Open the new expense form (e.g. click 'New expense')",
-      "selector_hint": null,
+      "intent": "fill_field",
+      "instruction": "Select the expense type from the dropdown",
+      "selector_hint": "Type dropdown",
       "uses_parameters": []
     },
     {
       "order": 3,
-      "intent": "upload_receipt",
-      "instruction": "Upload or attach the receipt file",
-      "selector_hint": null,
+      "intent": "fill_field",
+      "instruction": "Enter the expense amount",
+      "selector_hint": "Amount field",
       "uses_parameters": [
-        "receipt_file"
+        "amount"
       ]
     },
     {
       "order": 4,
       "intent": "fill_field",
-      "instruction": "Fill amount, date, category, and description fields",
-      "selector_hint": null,
+      "instruction": "Select the expense category",
+      "selector_hint": "Category dropdown",
       "uses_parameters": [
-        "amount",
-        "date",
-        "category",
-        "description"
+        "category"
       ]
     },
     {
       "order": 5,
-      "intent": "submit_form",
-      "instruction": "Submit the expense form",
-      "selector_hint": null,
-      "uses_parameters": []
+      "intent": "fill_field",
+      "instruction": "Enter the merchant name",
+      "selector_hint": "Merchant field",
+      "uses_parameters": [
+        "merchant"
+      ]
     },
     {
       "order": 6,
-      "intent": "confirmation",
-      "instruction": "Confirm submission if a confirmation step is shown",
-      "selector_hint": null,
+      "intent": "fill_field",
+      "instruction": "Enter the expense date",
+      "selector_hint": "Date field",
+      "uses_parameters": [
+        "date"
+      ]
+    },
+    {
+      "order": 7,
+      "intent": "upload_file",
+      "instruction": "Attach the receipt file",
+      "selector_hint": "Attach receipt button",
+      "uses_parameters": [
+        "receipt_file"
+      ]
+    },
+    {
+      "order": 8,
+      "intent": "fill_field",
+      "instruction": "Add optional notes about the expense",
+      "selector_hint": "Notes field",
+      "uses_parameters": [
+        "notes"
+      ]
+    },
+    {
+      "order": 9,
+      "intent": "fill_field",
+      "instruction": "Select the cost center",
+      "selector_hint": "Cost center field",
+      "uses_parameters": []
+    },
+    {
+      "order": 10,
+      "intent": "fill_field",
+      "instruction": "Select the project code",
+      "selector_hint": "Project dropdown",
+      "uses_parameters": []
+    },
+    {
+      "order": 11,
+      "intent": "submit_form",
+      "instruction": "Save the expense as a draft",
+      "selector_hint": "Save draft button",
+      "uses_parameters": []
+    },
+    {
+      "order": 12,
+      "intent": "submit_form",
+      "instruction": "Submit the expense for approval",
+      "selector_hint": "Submit for approval button",
+      "uses_parameters": []
+    },
+    {
+      "order": 13,
+      "intent": "confirm_action",
+      "instruction": "Confirm the submission",
+      "selector_hint": "Confirm button",
       "uses_parameters": []
     }
   ],
   "risk_level": "low",
-  "time_saved_minutes": 5
+  "time_saved_minutes": 4
 }

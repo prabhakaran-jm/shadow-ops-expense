@@ -86,6 +86,8 @@ Copy `backend/.env.example` to `backend/.env`. Key variables:
 | `PORT` | Server port | `8000` |
 | `DEBUG` | Debug mode | `false` |
 | `NOVA_MODE` | Inference mode: `mock` or `real` | `mock` |
+| `AWS_REGION` | AWS region for Bedrock (real mode) | `us-east-1` |
+| `NOVA_MODEL_ID_LITE` | Bedrock inference profile ID for Nova 2 Lite (optional) | `us.amazon.nova-2-lite-v1:0` |
 | `NOVA_2_LITE_API_KEY` | Nova 2 Lite API key (real mode) | — |
 | `NOVA_2_LITE_REGION` | Nova 2 Lite region | `us-east-1` |
 | `NOVA_2_LITE_ENDPOINT` | Nova 2 Lite endpoint override | — |
@@ -93,6 +95,8 @@ Copy `backend/.env.example` to `backend/.env`. Key variables:
 | `NOVA_ACT_REGION` | Nova Act region | `us-east-1` |
 | `NOVA_ACT_ENDPOINT` | Nova Act endpoint override | — |
 | `LOG_LEVEL` | Log level | `INFO` |
+
+For **real** inference (`NOVA_MODE=real`), the backend uses **Amazon Bedrock** (Nova 2 Lite). Configure AWS credentials (e.g. `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or an IAM role); no separate API key is required for Bedrock.
 
 | `VITE_API_BASE` (frontend) | Origin when not using proxy (e.g. `http://localhost:8000`). Leave **unset** for local dev so app uses `/api` and Vite proxy. | — |
 | `DEMO_BASE_URL` (demo script) | API base including `/api` for `demo_flow.py` (e.g. `http://localhost:8000/api`). | `http://localhost:8000/api` |

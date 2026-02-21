@@ -82,10 +82,12 @@ def post_agent_execute(body: AgentExecutionRequest) -> dict[str, Any]:
 
 @router.get("/health")
 def get_health() -> dict[str, str]:
-    """Health check for load balancers and monitoring; includes mode and version."""
+    """Health check for load balancers and monitoring; includes mode, region, model_id."""
     return {
         "status": "ok",
         "service": "shadow-ops-expense",
         "version": "0.1.0",
         "mode": settings.nova_mode,
+        "region": settings.aws_region,
+        "model_id": settings.nova_model_id_lite,
     }
