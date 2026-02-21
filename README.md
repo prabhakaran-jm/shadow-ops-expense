@@ -2,6 +2,26 @@
 
 AI-powered web application that infers expense submission workflows from user behavior (or prompts) and runs them via **Amazon Nova 2 Lite** (inference) and **Nova Act** (agent execution).
 
+## Features by category
+
+| Category | Features |
+|----------|----------|
+| **Agentic AI** | Workflow inference from capture sessions; human approval gate; agent generation from approved workflow; parameterized execution with run log and confirmation ID; UI-change adaptation simulation (failure → recovery → retry). |
+| **UI Automation** | Inferred steps (navigate, open form, upload receipt, fill fields, submit, confirmation); execution run log; mock agent that simulates step-by-step automation and adapts when UI text changes (e.g. Submit → Confirm). |
+| **Multimodal** | Capture session model supports `screenshot_path` and field labels per step; schema and prompts ready for vision/screenshot input in Nova 2 Lite inference (extension point). |
+
+## Screenshots
+
+*(Add 3–5 screenshots for submission; place files in `docs/screenshots/` or link here.)*
+
+| # | Description | Filename |
+|---|-------------|----------|
+| 1 | Dashboard – workflow list and selection | `docs/screenshots/01-dashboard-workflow-list.png` |
+| 2 | Workflow detail – parameters and steps | `docs/screenshots/02-workflow-detail.png` |
+| 3 | Run Agent modal – parameter form | `docs/screenshots/03-run-agent-modal.png` |
+| 4 | Run result – confirmation and run log | `docs/screenshots/04-run-result.png` |
+| 5 | Run log with UI-change adaptation highlighted | `docs/screenshots/05-run-log-adaptation.png` |
+
 ## Project structure
 
 ```
@@ -53,7 +73,23 @@ npm install
 
 ### 3. Environment
 
-- Backend: copy `backend/.env.example` to `backend/.env`. Set `NOVA_2_LITE_*` and `NOVA_ACT_*` when integrating real APIs; otherwise the app runs in placeholder mode.
+Copy `backend/.env.example` to `backend/.env`. Key variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HOST` | Server bind host | `0.0.0.0` |
+| `PORT` | Server port | `8000` |
+| `DEBUG` | Debug mode | `false` |
+| `NOVA_MODE` | Inference mode: `mock` or `real` | `mock` |
+| `NOVA_2_LITE_API_KEY` | Nova 2 Lite API key (real mode) | — |
+| `NOVA_2_LITE_REGION` | Nova 2 Lite region | `us-east-1` |
+| `NOVA_2_LITE_ENDPOINT` | Nova 2 Lite endpoint override | — |
+| `NOVA_ACT_API_KEY` | Nova Act API key (real mode) | — |
+| `NOVA_ACT_REGION` | Nova Act region | `us-east-1` |
+| `NOVA_ACT_ENDPOINT` | Nova Act endpoint override | — |
+| `LOG_LEVEL` | Log level | `INFO` |
+
+Frontend (optional): `VITE_API_BASE` – API base URL (leave unset in dev to use proxy).
 
 ## Run
 
@@ -113,7 +149,9 @@ Ensure the backend is up (`uvicorn app.main:app --reload --host 0.0.0.0 --port 8
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) – components, flow, and configuration.
+- [Architecture](docs/architecture.md) – mermaid diagrams, components, and configuration.
+- [Demo script (3 min)](docs/demo-script.md) – narration for judges.
+- [Judges notes](docs/judges-notes.md) – Nova services, mocked vs real, how to run demo.
 - [Backend README](backend/README.md) – backend-specific setup and endpoints.
 
 ## License
