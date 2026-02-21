@@ -164,9 +164,14 @@ The script:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST   | `/api/workflow/infer` | Infer workflow from prompt/context (Nova 2 Lite) |
-| POST   | `/api/agent/execute`  | Execute approved workflow (Nova Act) |
-| GET    | `/api/health`         | Health check |
+| GET    | `/api/health` | Health check |
+| POST   | `/api/capture/sessions` | Store capture session (input for inference) |
+| POST   | `/api/infer/{session_id}` | Infer workflow from session (Nova 2 Lite when NOVA_MODE=real) |
+| GET    | `/api/workflows` | List workflows |
+| GET    | `/api/workflows/{session_id}` | Get workflow detail |
+| POST   | `/api/workflows/{session_id}/approve` | Approve workflow |
+| POST   | `/api/agents/{session_id}/generate` | Generate agent from workflow |
+| POST   | `/api/agents/{session_id}/run` | Run agent with parameters (mock today; Nova Act when integrated) |
 
 ## Deploy on AWS (App Runner + S3/CloudFront)
 

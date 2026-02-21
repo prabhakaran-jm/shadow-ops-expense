@@ -43,7 +43,7 @@ app.add_middleware(
 )
 
 # All API routes live under /api (health, capture, infer, workflows, agents, schemas)
-app.include_router(router)  # /api/health, /api/workflow/infer, /api/agent/execute
+app.include_router(router)  # /api/health
 app.include_router(schemas_router, prefix="/api")
 app.include_router(capture_router, prefix="/api")
 app.include_router(infer_router, prefix="/api")
