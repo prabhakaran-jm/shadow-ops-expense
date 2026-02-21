@@ -1,5 +1,7 @@
 import type {
+  AgentRunRequest,
   ExecuteRequest,
+  ExecutionResult,
   InferRequest,
   InferredWorkflow,
   WorkflowDetail,
@@ -46,5 +48,21 @@ export async function getWorkflow(sessionId: string): Promise<WorkflowDetail> {
 export async function approveWorkflow(sessionId: string): Promise<{ approved: boolean }> {
   return request<{ approved: boolean }>(`/workflows/${sessionId}/approve`, {
     method: 'POST',
+  })
+}
+
+export async function generateAgent(sessionId: string): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(`/agents/${sessionId}/generate`, {
+    method: 'POST',
+  })
+}
+
+export async function runAgent(
+  sessionId: string,
+  body: AgentRunRequest
+): Promise<ExecutionResult> {
+  return request<ExecutionResult>(`/agents/${sessionId}/run`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   })
 }

@@ -1,6 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { WorkflowDetail, WorkflowListItem } from '../api/types'
-import { getWorkflows, getWorkflow, approveWorkflow } from '../api/client'
+import type { ExecutionResult, WorkflowDetail, WorkflowListItem } from '../api/types'
+import {
+  getWorkflows,
+  getWorkflow,
+  approveWorkflow,
+  generateAgent,
+} from '../api/client'
+import RunAgentModal from '../components/RunAgentModal'
 import styles from './Dashboard.module.css'
 
 export default function Dashboard() {
@@ -11,6 +17,10 @@ export default function Dashboard() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set())
+  const [generatedIds, setGeneratedIds] = useState<Set<string>>(new Set())
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [runModalSessionId, setRunModalSessionId] = useState<string | null>(null)
+  const [latestRunBySession, setLatestRunBySession] = useState<Record<string, ExecutionResult>>({})
   const [error, setError] = useState<string | null>(null)
 
   const loadList = useCallback(async () => {
@@ -56,6 +66,23 @@ export default function Dashboard() {
     } finally {
       setApprovingId(null)
     }
+  }, [])
+
+  const handleGenerateAgent = useCallback(async (sessionId: string) => {
+    setError(null)
+    setGeneratingId(sessionId)
+    try {
+      await generateAgent(sessionId)
+      setGeneratedIds((prev) => new Set(prev).add(sessionId))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Generate agent failed')
+    } finally {
+      setGeneratingId(null)
+    }
+  }, [])
+
+  const handleRunSuccess = useCallback((sessionId: string, result: ExecutionResult) => {
+    setLatestRunBySession((prev) => ({ ...prev, [sessionId]: result }))
   }, [])
 
   return (
@@ -192,11 +219,73 @@ export default function Dashboard() {
                     {approvingId === detail.session_id ? 'Approving…' : 'Approve'}
                   </button>
                 )}
+                {approvedIds.has(detail.session_id) && (
+                  <>
+                    {generatedIds.has(detail.session_id) ? (
+                      <button
+                        type="button"
+                        className={styles.buttonPrimary}
+                        onClick={() => setRunModalSessionId(detail.session_id)}
+                      >
+                        Run Agent
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.buttonSecondary}
+                        onClick={() => handleGenerateAgent(detail.session_id)}
+                        disabled={generatingId === detail.session_id}
+                      >
+                        {generatingId === detail.session_id ? 'Generating…' : 'Generate Agent'}
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
+
+              {latestRunBySession[detail.session_id] && (
+                <section className={styles.resultsSection}>
+                  <h3 className={styles.sectionTitle}>Latest run</h3>
+                  <RunResultPanel result={latestRunBySession[detail.session_id]} />
+                </section>
+              )}
             </>
           ) : null}
         </main>
       </div>
+
+      {runModalSessionId && (
+        <RunAgentModal
+          sessionId={runModalSessionId}
+          onClose={() => setRunModalSessionId(null)}
+          onSuccess={(result) => {
+            handleRunSuccess(runModalSessionId, result)
+            setRunModalSessionId(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function RunResultPanel({ result }: { result: ExecutionResult }) {
+  return (
+    <div className={styles.resultPanel}>
+      <div className={styles.resultMeta}>
+        <span className={styles.resultStatus}>{result.status}</span>
+        {result.confirmation_id && (
+          <span className={styles.resultConfirmation}>
+            Confirmation: {result.confirmation_id}
+          </span>
+        )}
+      </div>
+      <ul className={styles.runLog}>
+        {result.run_log.map((msg, i) => (
+          <li key={i} className={styles.runLogItem}>
+            {msg}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

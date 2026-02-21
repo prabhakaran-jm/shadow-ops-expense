@@ -62,3 +62,17 @@ export type ExecuteRequest = {
   workflow: Record<string, unknown>
   options?: Record<string, unknown>
 }
+
+/** Request body for POST /agents/{id}/run */
+export type AgentRunRequest = {
+  parameters: Record<string, unknown>
+  simulate_ui_change: boolean
+}
+
+/** Response from POST /agents/{id}/run */
+export type ExecutionResult = {
+  status: string
+  confirmation_id: string | null
+  run_id: string
+  run_log: string[]
+}
