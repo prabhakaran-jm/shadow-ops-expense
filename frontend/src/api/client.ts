@@ -2,14 +2,16 @@ import type {
   AgentRunRequest,
   ExecuteRequest,
   ExecutionResult,
+  HealthResponse,
   InferRequest,
   InferredWorkflow,
   WorkflowDetail,
   WorkflowListItem,
 } from './types'
 
-const base = typeof import.meta.env.VITE_API_BASE === 'string' ? import.meta.env.VITE_API_BASE : ''
-const API_BASE = base ? `${base.replace(/\/$/, '')}/api` : '/api'
+import { getApiBase } from './apiBase'
+
+const API_BASE = getApiBase(import.meta.env.VITE_API_BASE)
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -21,6 +23,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(text || `HTTP ${res.status}`)
   }
   return res.json() as Promise<T>
+}
+
+export async function getHealth(): Promise<HealthResponse> {
+  return request<HealthResponse>('/health')
 }
 
 export async function inferWorkflow(body: InferRequest): Promise<InferredWorkflow> {

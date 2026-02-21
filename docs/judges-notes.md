@@ -71,7 +71,7 @@ Both services are **designed in** (config, env vars, docstrings) and **called vi
    ```
 3. Confirm output shows `confirmation_id` and `run_id`.
 
-To use another host/port for the script: `DEMO_BASE_URL=http://localhost:8000 python backend/scripts/demo_flow.py`.
+To use another host/port: `DEMO_BASE_URL=http://localhost:8000/api python backend/scripts/demo_flow.py`.
 
 ### API docs
 

@@ -1,7 +1,7 @@
 """Structured logging configuration for Shadow Ops backend.
 
-Integrates structlog with stdlib logging so uvicorn (and other stdlib loggers)
-work with ProcessorFormatter and the extra= kwarg is handled via ExtraAdder.
+Uses structlog.stdlib.LoggerFactory (no PrintLogger) so uvicorn and app code
+share the same formatter. ProcessorFormatter + ExtraAdder handle stdlib extra=.
 """
 
 import logging
@@ -14,7 +14,7 @@ from app.config import settings
 
 
 def setup_logging() -> None:
-    """Configure structlog with stdlib logging integration."""
+    """Configure structlog with stdlib LoggerFactory; uvicorn logs use same formatter."""
     log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
 
     shared_processors: list[Processor] = [

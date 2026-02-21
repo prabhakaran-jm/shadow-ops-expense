@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.config import settings
 from app.logging_config import get_logger
 from app.services.nova_integration import execute_agent, infer_workflow
 
@@ -81,5 +82,10 @@ def post_agent_execute(body: AgentExecutionRequest) -> dict[str, Any]:
 
 @router.get("/health")
 def get_health() -> dict[str, str]:
-    """Health check for load balancers and monitoring."""
-    return {"status": "ok", "service": "shadow-ops-expense"}
+    """Health check for load balancers and monitoring; includes mode and version."""
+    return {
+        "status": "ok",
+        "service": "shadow-ops-expense",
+        "version": "0.1.0",
+        "mode": settings.nova_mode,
+    }

@@ -3,6 +3,40 @@
   margin: 0 auto;
 }
 
+.demoBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.demoBannerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.copyButton {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.copyButton:hover {
+  background: var(--border);
+}
+
 .header {
   margin-bottom: 1.5rem;
 }

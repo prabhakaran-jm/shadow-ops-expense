@@ -5,6 +5,7 @@ import {
   getWorkflow,
   approveWorkflow,
   generateAgent,
+  getHealth,
 } from '../api/client'
 import RunAgentModal from '../components/RunAgentModal'
 import styles from './Dashboard.module.css'
@@ -22,6 +23,30 @@ export default function Dashboard() {
   const [runModalSessionId, setRunModalSessionId] = useState<string | null>(null)
   const [latestRunBySession, setLatestRunBySession] = useState<Record<string, ExecutionResult>>({})
   const [error, setError] = useState<string | null>(null)
+  const [healthInfo, setHealthInfo] = useState<{ mode: string; version: string } | null>(null)
+  const [copyHint, setCopyHint] = useState<string | null>(null)
+
+  useEffect(() => {
+    getHealth()
+      .then((h) =>
+        setHealthInfo({
+          mode: h.mode ?? 'unknown',
+          version: h.version ?? '—',
+        })
+      )
+      .catch(() => setHealthInfo(null))
+  }, [])
+
+  const demoFlowCommand = 'python backend/scripts/demo_flow.py'
+  const handleCopyDemoCommand = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(demoFlowCommand)
+      setCopyHint('Copied!')
+      setTimeout(() => setCopyHint(null), 2000)
+    } catch {
+      setCopyHint('Copy failed')
+    }
+  }, [])
 
   const loadList = useCallback(async () => {
     setError(null)
@@ -87,6 +112,22 @@ export default function Dashboard() {
 
   return (
     <div className={styles.dashboard}>
+      {healthInfo !== null && (
+        <div className={styles.demoBanner}>
+          <span>Demo Mode: NOVA_MODE={healthInfo.mode} | v{healthInfo.version}</span>
+          <div className={styles.demoBannerActions}>
+            <button
+              type="button"
+              className={styles.copyButton}
+              onClick={handleCopyDemoCommand}
+              title="Copy demo_flow command"
+            >
+              {copyHint ?? 'Copy demo_flow command'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className={styles.header}>
         <h1 className={styles.title}>Workflow review</h1>
         <p className={styles.subtitle}>

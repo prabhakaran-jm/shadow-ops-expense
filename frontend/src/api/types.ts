@@ -1,3 +1,11 @@
+/** Response from GET /api/health */
+export type HealthResponse = {
+  status: string
+  service: string
+  version?: string
+  mode?: string
+}
+
 export type WorkflowStep = {
   id: string
   action: string

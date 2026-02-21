@@ -53,6 +53,11 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
+**Windows (Git Bash):**
+```bash
+source .venv/Scripts/activate
+```
+
 **macOS / Linux:**
 ```bash
 source .venv/bin/activate
@@ -89,14 +94,18 @@ Copy `backend/.env.example` to `backend/.env`. Key variables:
 | `NOVA_ACT_ENDPOINT` | Nova Act endpoint override | — |
 | `LOG_LEVEL` | Log level | `INFO` |
 
-Frontend (optional): `VITE_API_BASE` – API base URL (leave unset in dev to use proxy).
+| `VITE_API_BASE` (frontend) | Origin when not using proxy (e.g. `http://localhost:8000`). Leave **unset** for local dev so app uses `/api` and Vite proxy. | — |
+| `DEMO_BASE_URL` (demo script) | API base including `/api` for `demo_flow.py` (e.g. `http://localhost:8000/api`). | `http://localhost:8000/api` |
 
-## Run
+## Run (quickstart)
+
+All backend routes are under **`/api`** (including health). Start backend then frontend; no env vars required for local dev.
 
 **Terminal 1 – Backend:**
 ```bash
 cd backend
-.venv\Scripts\activate   # or source .venv/bin/activate
+.venv\Scripts\activate   # Windows PowerShell
+# source .venv/bin/activate   # macOS / Linux
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -106,30 +115,37 @@ cd frontend
 npm run dev
 ```
 
-- **App:** http://localhost:5173  
-- **API docs:** http://localhost:8000/docs  
-- **Health:** http://localhost:8000/api/health  
+**Exact URLs:**
 
-The frontend proxies `/api` to the backend, so the dashboard can infer workflows and trigger execution without CORS setup.
+| What | URL |
+|------|-----|
+| Dashboard (app) | http://localhost:5173 |
+| API docs (Swagger) | http://localhost:8000/docs |
+| Health check | http://localhost:8000/api/health |
+
+**Frontend API:** Leave `VITE_API_BASE` unset; the app uses `/api` and Vite proxies it to `http://localhost:8000`. No manual config needed for local demo.
+
+**Verify:** `curl http://localhost:8000/api/health` → `{"status":"ok","service":"shadow-ops-expense"}`
 
 ## Quick Demo (Mock Mode)
 
-With the backend running (and `NOVA_MODE=mock` in `backend/.env`, or unset), run the full flow from the project root:
+With the backend running, from the **project root**:
 
 ```bash
 python backend/scripts/demo_flow.py
 ```
 
-The script will:
+The script:
 
-1. Post `demo/sample_logs.json` to **POST /api/capture/sessions**
-2. Call **POST /api/infer/{session_id}** to infer a workflow
-3. Call **POST /api/workflows/{session_id}/approve**
-4. Call **POST /api/agents/{session_id}/generate**
-5. Call **POST /api/agents/{session_id}/run** with sample parameters
-6. Print **confirmation_id** and **run_id**
+0. Calls **GET /api/health** (retries 3× with 1s delay if backend not ready)
+1. Posts `demo/sample_logs.json` to **POST /api/capture/sessions**
+2. Calls **POST /api/infer/{session_id}**
+3. Calls **POST /api/workflows/{session_id}/approve**
+4. Calls **POST /api/agents/{session_id}/generate**
+5. Calls **POST /api/agents/{session_id}/run** with sample parameters
+6. Prints **confirmation_id** and **run_id**
 
-Ensure the backend is up (`uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` from `backend/`). To point at another host/port, set `DEMO_BASE_URL` (e.g. `DEMO_BASE_URL=http://localhost:8000 python backend/scripts/demo_flow.py`).
+**Env (optional):** `DEMO_BASE_URL` – API base including `/api` (default `http://localhost:8000/api`). Example: `DEMO_BASE_URL=http://localhost:8000/api python backend/scripts/demo_flow.py`
 
 ## Usage
 

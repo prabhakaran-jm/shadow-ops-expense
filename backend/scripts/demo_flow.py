@@ -2,28 +2,31 @@
 """
 Run the full demo flow against a local backend (mock mode).
 
-Requires: backend running at BASE_URL (default http://localhost:8000).
-Usage: from repo root: python backend/scripts/demo_flow.py
-       from backend/:  python scripts/demo_flow.py
-       Optional: set DEMO_BASE_URL to override (e.g. http://localhost:8000).
+Calls GET /api/health first (retries 3x) then capture → infer → approve → generate → run.
+BASE_URL defaults to http://localhost:8000/api (all paths are relative to that).
+Override with DEMO_BASE_URL (e.g. http://localhost:8000/api or http://host:port/api).
+
+Usage:
+  From repo root:  python backend/scripts/demo_flow.py
+  From backend/:   python scripts/demo_flow.py
 """
 
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import urllib.error
 import urllib.request
 
-# Resolve paths: script may be run as backend/scripts/demo_flow.py or scripts/demo_flow.py
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _BACKEND_DIR = _SCRIPT_DIR.parent
 _PROJECT_ROOT = _BACKEND_DIR.parent
 SAMPLE_LOGS_PATH = _PROJECT_ROOT / "demo" / "sample_logs.json"
 
-BASE_URL = os.environ.get("DEMO_BASE_URL", "http://localhost:8000")
-API = f"{BASE_URL.rstrip('/')}/api"
+# Single base URL including /api; paths are e.g. /health, /capture/sessions
+BASE_URL = os.environ.get("DEMO_BASE_URL", "http://localhost:8000/api").rstrip("/")
 
 SAMPLE_PARAMETERS = {
     "amount": "125.50",
@@ -33,9 +36,12 @@ SAMPLE_PARAMETERS = {
     "receipt_file": "receipt.pdf",
 }
 
+HEALTH_RETRIES = 3
+HEALTH_DELAY_SEC = 1.0
+
 
 def _request(method: str, path: str, body: dict | None = None) -> dict:
-    url = f"{API}{path}"
+    url = f"{BASE_URL}{path}"
     data = json.dumps(body).encode("utf-8") if body else None
     req = urllib.request.Request(
         url,
@@ -54,10 +60,38 @@ def _request(method: str, path: str, body: dict | None = None) -> dict:
         raise
 
 
+def _wait_for_health() -> None:
+    """Call GET /api/health; retry up to HEALTH_RETRIES times with HEALTH_DELAY_SEC between."""
+    path = "/health"
+    for attempt in range(1, HEALTH_RETRIES + 1):
+        try:
+            _request("GET", path)
+            return
+        except (urllib.error.HTTPError, OSError) as e:
+            if attempt == HEALTH_RETRIES:
+                print(
+                    f"Backend not ready after {HEALTH_RETRIES} attempts: {e}",
+                    file=sys.stderr,
+                )
+                print(
+                    "Start backend with: uvicorn app.main:app --reload "
+                    "--host 0.0.0.0 --port 8000",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            time.sleep(HEALTH_DELAY_SEC)
+
+
 def main() -> None:
+    print(f"BASE_URL = {BASE_URL}")
+
     if not SAMPLE_LOGS_PATH.exists():
         print(f"Missing {SAMPLE_LOGS_PATH}", file=sys.stderr)
         sys.exit(1)
+
+    print("0) Checking backend health...")
+    _wait_for_health()
+    print("   ok")
 
     print("1) Posting capture session...")
     with open(SAMPLE_LOGS_PATH, encoding="utf-8") as f:
