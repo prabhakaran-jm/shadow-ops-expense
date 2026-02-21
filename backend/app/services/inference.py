@@ -16,8 +16,9 @@ from app.models import (
 
 logger = get_logger(__name__)
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-_INFERENCE_PROMPT_PATH = _PROJECT_ROOT / "prompts" / "inference_prompt.txt"
+# Backend root (backend/ when local, /app in Docker) so prompts are inside the image
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+_INFERENCE_PROMPT_PATH = _BACKEND_ROOT / "prompts" / "inference_prompt.txt"
 _MAX_SAFE_PREVIEW_CHARS = 300
 STRICT_PROMPT_SUFFIX = (
     "Return ONLY raw JSON, no markdown, no code fences, no commentary. "

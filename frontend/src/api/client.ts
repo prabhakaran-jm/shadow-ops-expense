@@ -5,6 +5,7 @@ import type {
   HealthResponse,
   InferRequest,
   InferredWorkflow,
+  ReceiptExtractionResult,
   WorkflowDetail,
   WorkflowListItem,
 } from './types'
@@ -27,6 +28,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export async function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>('/health')
+}
+
+export async function uploadReceipt(file: File): Promise<ReceiptExtractionResult> {
+  const url = `${API_BASE}/capture/receipt`
+  if (import.meta.env.DEV) console.log('[uploadReceipt] POST', url)
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    let message = text || `HTTP ${res.status}`
+    try {
+      const json = JSON.parse(text) as { detail?: string }
+      if (typeof json.detail === 'string') message = json.detail
+    } catch {
+      /* use message as-is */
+    }
+    throw new Error(message)
+  }
+  return res.json() as Promise<ReceiptExtractionResult>
 }
 
 export async function inferWorkflow(body: InferRequest): Promise<InferredWorkflow> {

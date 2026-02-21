@@ -7,6 +7,7 @@ import {
   generateAgent,
   getHealth,
 } from '../api/client'
+import ReceiptUpload from '../components/ReceiptUpload'
 import RunAgentModal from '../components/RunAgentModal'
 import styles from './Dashboard.module.css'
 
@@ -114,7 +115,9 @@ export default function Dashboard() {
     <div className={styles.dashboard}>
       {healthInfo !== null && (
         <div className={styles.demoBanner}>
-          <span>Demo Mode: NOVA_MODE={healthInfo.mode} | v{healthInfo.version}</span>
+          <span>
+            Demo Mode: <span className={healthInfo.mode === 'real' ? styles.modeReal : styles.modeMock}>●</span> NOVA_MODE={healthInfo.mode} | v{healthInfo.version}
+          </span>
           <div className={styles.demoBannerActions}>
             <button
               type="button"
@@ -134,6 +137,13 @@ export default function Dashboard() {
           Select a workflow to view details and approve for execution.
         </p>
       </header>
+
+      <ReceiptUpload
+        onWorkflowCreated={(sessionId) => {
+          loadList()
+          setSelectedId(sessionId)
+        }}
+      />
 
       {error && (
         <div className={styles.errorBanner} role="alert">
@@ -323,7 +333,10 @@ function RunResultPanel({ result }: { result: ExecutionResult }) {
       <ul className={styles.runLog}>
         {result.run_log.map((msg, i) => {
           const isAdaptation =
-            msg.includes('UI changed') || msg.includes('retry:')
+            msg.includes('UI changed') ||
+            msg.includes('retry') ||
+            msg.includes('adapted') ||
+            msg.includes('retrying')
           return (
             <li
               key={i}

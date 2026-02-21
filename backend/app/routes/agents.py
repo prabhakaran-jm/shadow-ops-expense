@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.logging_config import get_logger
 from app.models import ActAgentSpec, ExecutionRequest, ExecutionResult, InferredWorkflow
-from app.services.act_client import ActClientMock
+from app.services.act_client import get_act_client
 from app.services.storage import (
     agents_dir,
     approvals_dir,
@@ -17,7 +17,7 @@ from app.services.storage import (
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/agents", tags=["agents"])
-act_client = ActClientMock()
+act_client = get_act_client()
 
 
 @router.post("/{session_id}/generate")

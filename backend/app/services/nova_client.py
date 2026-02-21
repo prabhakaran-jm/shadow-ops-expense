@@ -62,3 +62,61 @@ def call_nova_2_lite(prompt: str) -> str:
     else:
         logger.info("nova_invoke_success", output_length=len(text))
     return text
+
+
+def call_nova_2_lite_multimodal(prompt: str, image_bytes: bytes, media_type: str) -> str:
+    """
+    Invoke Nova 2 Lite with image + text (receipt extraction).
+    media_type e.g. image/jpeg; image bytes are base64-encoded in the payload.
+    Returns model text output. Does not log image or base64 content.
+    """
+    import base64
+
+    format_map = {
+        "image/jpeg": "jpeg",
+        "image/png": "png",
+        "image/gif": "gif",
+        "image/webp": "webp",
+    }
+    fmt = format_map.get(media_type.lower() if media_type else "", "jpeg")
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    payload = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "image": {
+                            "format": fmt,
+                            "source": {"bytes": b64},
+                        },
+                    },
+                    {"text": prompt},
+                ],
+            },
+        ],
+    }
+    client = get_bedrock_runtime_client()
+    model_id = settings.nova_model_id_lite
+    body = json.dumps(payload).encode("utf-8")
+    logger.info(
+        "receipt_extraction_start",
+        image_size_bytes=len(image_bytes),
+        media_type=media_type,
+    )
+    response = client.invoke_model(
+        modelId=model_id,
+        contentType="application/json",
+        accept="application/json",
+        body=body,
+    )
+    response_json = json.loads(response["body"].read().decode("utf-8"))
+    try:
+        text = response_json["output"]["message"]["content"][0]["text"]
+    except (KeyError, IndexError, TypeError):
+        text = ""
+    if not text.strip():
+        logger.warning("receipt_extraction_empty_output")
+    else:
+        logger.info("receipt_extraction_success", output_length=len(text))
+    return text

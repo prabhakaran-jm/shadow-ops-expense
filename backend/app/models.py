@@ -102,3 +102,11 @@ class ExecutionResult(BaseModel):
         default_factory=list,
         description="Step-by-step log messages",
     )
+
+
+class ReceiptExtractionResult(BaseModel):
+    """Result of receipt upload: session_id, extracted fields, workflow_inferred."""
+
+    session_id: str = Field(..., description="Created capture session id")
+    extracted: dict = Field(..., description="amount, merchant, date, category, currency, confidence")
+    workflow_inferred: bool = Field(..., description="Whether inference was run and stored")

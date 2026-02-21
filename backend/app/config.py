@@ -38,10 +38,13 @@ class Settings(BaseSettings):
     nova_2_lite_region: str = "us-east-1"
     nova_2_lite_endpoint: str = ""
 
-    # Amazon Nova Act (agent execution placeholder)
+    # Amazon Nova Act (agent execution)
+    nova_act_mode: str = "mock"  # "mock" or "real"
     nova_act_api_key: str = ""
     nova_act_region: str = "us-east-1"
     nova_act_endpoint: str = ""
+    nova_act_starting_page: str = "https://expense.corp.example.com/dashboard"
+    nova_act_headless: bool = False
 
     # Logging
     log_level: str = "INFO"

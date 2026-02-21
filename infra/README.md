@@ -105,10 +105,20 @@ Set the backend env var `CORS_ALLOW_ORIGINS` to your CloudFront (or custom) orig
 
 Redeploy the App Runner service after changing env vars.
 
+## One-command deploy (backend + frontend)
+
+From repo root:
+
+- **Windows (PowerShell):** `.\infra\deploy.ps1`
+- **Linux/macOS:** `./infra/deploy.sh` (chmod +x first if needed)
+
+This will: terraform init/apply (ECR, S3, CloudFront), build and push the backend image, enable App Runner, build the frontend with the App Runner URL, sync to S3, and invalidate CloudFront. Requires Terraform, AWS CLI, and Docker.
+
 ## Summary
 
 | Step | Command / action |
 |------|------------------|
+| **All-in-one** | `.\infra\deploy.ps1` (Windows) or `./infra/deploy.sh` (Unix) |
 | Phase 1 – provision ECR, IAM, S3, CF | `cd infra && terraform init && terraform apply` |
 | Push backend image | `docker build`, ECR login, tag, push (see Phase 2 above) |
 | Phase 2 – create App Runner | `terraform apply -var="create_apprunner=true"` |

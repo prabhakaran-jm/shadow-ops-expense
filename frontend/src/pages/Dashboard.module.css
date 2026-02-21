@@ -18,6 +18,14 @@
   color: var(--text-secondary);
 }
 
+.modeReal {
+  color: #16a34a;
+}
+
+.modeMock {
+  color: #ca8a04;
+}
+
 .demoBannerActions {
   display: flex;
   align-items: center;

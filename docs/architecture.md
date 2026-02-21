@@ -88,9 +88,9 @@ flowchart TB
 shadow-ops-expense/
 ├── backend/          # FastAPI app, config, logging, Nova placeholders
 │   ├── app/          # routes, services, models
-│   └── scripts/      # demo_flow.py
+│   ├── prompts/     # Prompt templates (inference_prompt.txt, receipt_extraction_prompt.txt)
+│   └── scripts/     # demo_flow.py
 ├── frontend/         # React app, dashboard, API client
-├── prompts/          # Prompt templates (e.g. inference_prompt.txt)
 ├── demo/             # Sessions, workflows, approvals, agents, runs, sample_logs
 ├── docs/             # Architecture, demo script, judges notes
 └── README.md

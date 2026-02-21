@@ -1,9 +1,10 @@
-"""Capture session storage: POST and GET with disk persistence."""
+"""Capture session storage and receipt upload."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from app.logging_config import get_logger
 from app.models import CaptureSession
+from app.routes.receipt import process_receipt_upload
 from app.services.storage import read_json, sessions_dir, write_json
 
 logger = get_logger(__name__)
@@ -63,3 +64,15 @@ def get_capture_session(session_id: str) -> dict:
     data = read_json(path)
     logger.info("capture_session_loaded", session_id=session_id)
     return data
+
+
+@router.get("/receipt")
+def get_receipt_info():
+    """Debug: confirms receipt endpoint is reachable. Use POST with multipart file for upload."""
+    return {"ok": True, "message": "Use POST with multipart/form-data and 'file' field to upload a receipt."}
+
+
+@router.post("/receipt")
+async def post_capture_receipt(file: UploadFile) -> dict:
+    """Receipt image upload: extract, create session, infer workflow."""
+    return await process_receipt_upload(file)

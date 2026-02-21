@@ -27,8 +27,8 @@ AI-powered web application that infers expense submission workflows from user be
 ```
 shadow-ops-expense/
 ├── backend/       # FastAPI – workflow inference & agent execution APIs
+│   └── prompts/   # AI prompt templates (inference, receipt extraction)
 ├── frontend/      # React (Vite) – dashboard, approval, execution trigger
-├── prompts/       # AI prompt templates
 ├── demo/          # Demo assets and sample payloads
 ├── docs/          # Architecture and documentation
 └── README.md      # This file
@@ -166,6 +166,7 @@ The script:
 |--------|----------|-------------|
 | GET    | `/api/health` | Health check |
 | POST   | `/api/capture/sessions` | Store capture session (input for inference) |
+| POST   | `/api/capture/receipt` | Upload receipt image; extract fields, create session, infer workflow (Nova 2 Lite multimodal or mock) |
 | POST   | `/api/infer/{session_id}` | Infer workflow from session (Nova 2 Lite when NOVA_MODE=real) |
 | GET    | `/api/workflows` | List workflows |
 | GET    | `/api/workflows/{session_id}` | Get workflow detail |

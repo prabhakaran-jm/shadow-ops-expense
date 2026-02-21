@@ -6,6 +6,20 @@ export type HealthResponse = {
   mode?: string
 }
 
+/** Response from POST /api/capture/receipt */
+export type ReceiptExtractionResult = {
+  session_id: string
+  extracted: {
+    amount: string | null
+    merchant: string | null
+    date: string | null
+    category: string | null
+    currency: string | null
+    confidence: number
+  }
+  workflow_inferred: boolean
+}
+
 export type WorkflowStep = {
   id: string
   action: string
