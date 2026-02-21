@@ -76,6 +76,25 @@ npm run dev
 
 The frontend proxies `/api` to the backend, so the dashboard can infer workflows and trigger execution without CORS setup.
 
+## Quick Demo (Mock Mode)
+
+With the backend running (and `NOVA_MODE=mock` in `backend/.env`, or unset), run the full flow from the project root:
+
+```bash
+python backend/scripts/demo_flow.py
+```
+
+The script will:
+
+1. Post `demo/sample_logs.json` to **POST /api/capture/sessions**
+2. Call **POST /api/infer/{session_id}** to infer a workflow
+3. Call **POST /api/workflows/{session_id}/approve**
+4. Call **POST /api/agents/{session_id}/generate**
+5. Call **POST /api/agents/{session_id}/run** with sample parameters
+6. Print **confirmation_id** and **run_id**
+
+Ensure the backend is up (`uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` from `backend/`). To point at another host/port, set `DEMO_BASE_URL` (e.g. `DEMO_BASE_URL=http://localhost:8000 python backend/scripts/demo_flow.py`).
+
 ## Usage
 
 1. Open the **Dashboard** at http://localhost:5173.
