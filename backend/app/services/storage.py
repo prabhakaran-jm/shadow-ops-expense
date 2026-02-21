@@ -21,6 +21,22 @@ def workflows_dir() -> Path:
     return _project_root() / "demo" / "workflows"
 
 
+def approvals_dir() -> Path:
+    """Directory for workflow approval records: demo/approvals."""
+    return _project_root() / "demo" / "approvals"
+
+
+def list_workflow_session_ids() -> list[str]:
+    """List session_ids of stored workflows (demo/workflows/*.workflow.json)."""
+    directory = workflows_dir()
+    if not directory.exists():
+        return []
+    return [
+        p.name.replace(".workflow.json", "")
+        for p in directory.glob("*.workflow.json")
+    ]
+
+
 def ensure_dir(path: Path) -> None:
     """Create directory and parents if they do not exist."""
     path.mkdir(parents=True, exist_ok=True)
