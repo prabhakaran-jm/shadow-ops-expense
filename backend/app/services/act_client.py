@@ -31,6 +31,13 @@ def _workflow_steps_as_dicts(workflow: InferredWorkflow) -> list[dict[str, Any]]
     return [s.model_dump(mode="json") for s in workflow.steps]
 
 
+def _is_submit_step(intent: str, instruction: str) -> bool:
+    """True if this step is the submit step (for UI-change simulation)."""
+    instruction_lower = instruction.lower()
+    intent_lower = intent.lower()
+    return "submit" in intent_lower or "submit" in instruction_lower
+
+
 class ActClientMock:
     """Mock Nova Act client: create_agent from workflow, run_agent with step log."""
 
@@ -69,6 +76,18 @@ class ActClientMock:
             intent = step.get("intent", "step")
             instruction = step.get("instruction", "")
             run_log.append(f"[{mode}] Step {i}: {intent} – {instruction}")
+
+            if simulate_ui_change and _is_submit_step(intent, instruction):
+                run_log.append(
+                    f"[{mode}] Step {i} failed: element not found (Submit)"
+                )
+                run_log.append(
+                    "[simulate] UI changed: Submit renamed to Confirm"
+                )
+                run_log.append(
+                    f"[{mode}] Step {i} retry: {intent} – Click Confirm to send."
+                )
+
         run_log.append(f"[{mode}] All steps completed.")
         confirmation_id = f"EXP-2026-{uuid.uuid4().int % 1000000:06d}"
         run_log.append(f"[{mode}] Confirmation ID: {confirmation_id}")

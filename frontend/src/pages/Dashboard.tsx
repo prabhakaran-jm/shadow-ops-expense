@@ -280,11 +280,22 @@ function RunResultPanel({ result }: { result: ExecutionResult }) {
         )}
       </div>
       <ul className={styles.runLog}>
-        {result.run_log.map((msg, i) => (
-          <li key={i} className={styles.runLogItem}>
-            {msg}
-          </li>
-        ))}
+        {result.run_log.map((msg, i) => {
+          const isAdaptation =
+            msg.includes('UI changed') || msg.includes('retry:')
+          return (
+            <li
+              key={i}
+              className={
+                isAdaptation
+                  ? `${styles.runLogItem} ${styles.runLogItemAdaptation}`
+                  : styles.runLogItem
+              }
+            >
+              {msg}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )

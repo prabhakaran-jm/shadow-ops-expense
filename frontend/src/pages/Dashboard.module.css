@@ -380,3 +380,11 @@
 .runLogItem:last-child {
   border-bottom: none;
 }
+
+.runLogItemAdaptation {
+  background: #fef9c3;
+  border-left: 3px solid var(--warning);
+  padding-left: 0.5rem;
+  margin-left: -0.35rem;
+  color: var(--text-primary);
+}
