@@ -26,6 +26,16 @@ def approvals_dir() -> Path:
     return _project_root() / "demo" / "approvals"
 
 
+def agents_dir() -> Path:
+    """Directory for generated agent specs: demo/agents."""
+    return _project_root() / "demo" / "agents"
+
+
+def runs_dir() -> Path:
+    """Directory for execution run results: demo/runs."""
+    return _project_root() / "demo" / "runs"
+
+
 def list_workflow_session_ids() -> list[str]:
     """List session_ids of stored workflows (demo/workflows/*.workflow.json)."""
     directory = workflows_dir()

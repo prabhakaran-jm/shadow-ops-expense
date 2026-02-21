@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.config import settings
+from app.routes.agents import router as agents_router
 from app.routes.capture import router as capture_router
 from app.routes.infer import router as infer_router
 from app.routes.schemas import router as schemas_router
@@ -46,6 +47,7 @@ app.include_router(schemas_router, prefix="/api")
 app.include_router(capture_router, prefix="/api")
 app.include_router(infer_router, prefix="/api")
 app.include_router(workflows_router, prefix="/api")
+app.include_router(agents_router, prefix="/api")
 
 
 @app.get("/")

@@ -59,3 +59,46 @@ class InferredWorkflow(BaseModel):
     steps: list[WorkflowStep] = Field(..., description="Ordered steps to be executed by the agent")
     risk_level: str = Field(..., description="Assessed risk level (e.g. low, medium, high)")
     time_saved_minutes: int = Field(..., description="Estimated minutes saved per run when automated")
+
+
+# ---------------------------------------------------------------------------
+# Agent generation and execution (Nova Act scaffolding)
+# ---------------------------------------------------------------------------
+
+
+class ActAgentSpec(BaseModel):
+    """Spec for an agent generated from an approved workflow."""
+
+    agent_id: str = Field(..., description="Unique agent identifier")
+    name: str = Field(..., description="Display name")
+    description: str = Field(..., description="What the agent does")
+    parameter_schema: dict = Field(
+        default_factory=dict,
+        description="JSON Schema for execution parameters",
+    )
+    steps: list[dict] = Field(
+        default_factory=list,
+        description="Ordered steps (e.g. from workflow)",
+    )
+
+
+class ExecutionRequest(BaseModel):
+    """Request to run an agent."""
+
+    parameters: dict = Field(default_factory=dict, description="Parameter values")
+    simulate_ui_change: bool = Field(
+        False,
+        description="If true, simulate UI changes without performing them",
+    )
+
+
+class ExecutionResult(BaseModel):
+    """Result of an agent run."""
+
+    status: str = Field(..., description="e.g. completed, failed")
+    confirmation_id: str | None = Field(None, description="e.g. EXP-2026-000123")
+    run_id: str = Field(..., description="Unique run identifier")
+    run_log: list[str] = Field(
+        default_factory=list,
+        description="Step-by-step log messages",
+    )
