@@ -1,6 +1,13 @@
-import type { InferRequest, ExecuteRequest, InferredWorkflow } from './types'
+import type {
+  ExecuteRequest,
+  InferRequest,
+  InferredWorkflow,
+  WorkflowDetail,
+  WorkflowListItem,
+} from './types'
 
-const API_BASE = '/api'
+const base = typeof import.meta.env.VITE_API_BASE === 'string' ? import.meta.env.VITE_API_BASE : ''
+const API_BASE = base ? `${base.replace(/\/$/, '')}/api` : '/api'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -25,5 +32,19 @@ export async function executeAgent(body: ExecuteRequest): Promise<{ run_id: stri
   return request('/agent/execute', {
     method: 'POST',
     body: JSON.stringify(body),
+  })
+}
+
+export async function getWorkflows(): Promise<WorkflowListItem[]> {
+  return request<WorkflowListItem[]>('/workflows')
+}
+
+export async function getWorkflow(sessionId: string): Promise<WorkflowDetail> {
+  return request<WorkflowDetail>(`/workflows/${sessionId}`)
+}
+
+export async function approveWorkflow(sessionId: string): Promise<{ approved: boolean }> {
+  return request<{ approved: boolean }>(`/workflows/${sessionId}/approve`, {
+    method: 'POST',
   })
 }

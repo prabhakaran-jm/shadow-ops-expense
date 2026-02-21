@@ -15,6 +15,42 @@ export type InferredWorkflow = {
   executed?: boolean
 }
 
+/** List item from GET /workflows */
+export type WorkflowListItem = {
+  session_id: string
+  title: string
+  risk_level: string
+  time_saved_minutes: number
+}
+
+/** Workflow parameter (backend model) */
+export type WorkflowParameter = {
+  name: string
+  type: string
+  required: boolean
+  example?: string | null
+}
+
+/** Step in workflow detail (backend model) */
+export type WorkflowStepDetail = {
+  order: number
+  intent: string
+  instruction: string
+  selector_hint?: string | null
+  uses_parameters: string[]
+}
+
+/** Full workflow from GET /workflows/{id} */
+export type WorkflowDetail = {
+  session_id: string
+  title: string
+  description: string
+  parameters: WorkflowParameter[]
+  steps: WorkflowStepDetail[]
+  risk_level: string
+  time_saved_minutes: number
+}
+
 export type InferRequest = {
   prompt?: string
   context?: Record<string, unknown>
