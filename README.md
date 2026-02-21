@@ -95,6 +95,7 @@ Copy `backend/.env.example` to `backend/.env`. Key variables:
 | `NOVA_ACT_REGION` | Nova Act region | `us-east-1` |
 | `NOVA_ACT_ENDPOINT` | Nova Act endpoint override | — |
 | `LOG_LEVEL` | Log level | `INFO` |
+| `CORS_ALLOW_ORIGINS` | Comma-separated origins for CORS (e.g. CloudFront URL). If unset, localhost + dev origins only. | — |
 
 For **real** inference (`NOVA_MODE=real`), the backend uses **Amazon Bedrock** (Nova 2 Lite). Configure AWS credentials (e.g. `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or an IAM role); no separate API key is required for Bedrock.
 
@@ -166,6 +167,17 @@ The script:
 | POST   | `/api/workflow/infer` | Infer workflow from prompt/context (Nova 2 Lite) |
 | POST   | `/api/agent/execute`  | Execute approved workflow (Nova Act) |
 | GET    | `/api/health`         | Health check |
+
+## Deploy on AWS (App Runner + S3/CloudFront)
+
+For a **Terraform-defined** stack (ECR, App Runner, S3, CloudFront), see **[infra/README.md](infra/README.md)** for:
+
+- `terraform init` / `plan` / `apply`
+- Docker build, ECR login, tag, and push for the backend
+- Frontend build with `VITE_API_BASE` set to the App Runner URL (frontend appends `/api` if needed)
+- S3 upload of `frontend/dist` and CloudFront invalidation
+
+**Acceptance:** Backend container runs locally with Docker and `/api/health` works; frontend build with `VITE_API_BASE` works against the deployed backend.
 
 ## Documentation
 

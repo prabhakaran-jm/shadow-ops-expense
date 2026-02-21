@@ -212,3 +212,17 @@ frontend/dist/
 npm-debug.log*
 .yarn/
 .pnpm-debug.log*
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log

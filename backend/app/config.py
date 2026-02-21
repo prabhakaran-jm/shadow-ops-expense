@@ -18,6 +18,21 @@ class Settings(BaseSettings):
     port: int = 8000
     debug: bool = False
 
+    # CORS: comma-separated origins (env CORS_ALLOW_ORIGINS); if unset, allow localhost + dev
+    cors_allow_origins: str = ""
+
+    def get_cors_origins(self) -> list[str]:
+        """List of origins for CORS; from CORS_ALLOW_ORIGINS or default dev origins."""
+        raw = (self.cors_allow_origins or "").strip()
+        if raw:
+            return [o.strip() for o in raw.split(",") if o.strip()]
+        return [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
+        ]
+
     # Amazon Nova 2 Lite (inference placeholder)
     nova_2_lite_api_key: str = ""
     nova_2_lite_region: str = "us-east-1"
