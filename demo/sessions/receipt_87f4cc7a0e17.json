@@ -1,0 +1,58 @@
+{
+  "session_id": "receipt_87f4cc7a0e17",
+  "steps": [
+    {
+      "step_index": 0,
+      "url": "/expense/dashboard",
+      "action": "navigate",
+      "element_text": null,
+      "field_label": null,
+      "value_redacted": null,
+      "screenshot_path": null,
+      "timestamp": null
+    },
+    {
+      "step_index": 1,
+      "url": "/expense/new",
+      "action": "type",
+      "element_text": null,
+      "field_label": "amount",
+      "value_redacted": "45.50",
+      "screenshot_path": null,
+      "timestamp": null
+    },
+    {
+      "step_index": 2,
+      "url": "/expense/new",
+      "action": "type",
+      "element_text": null,
+      "field_label": "merchant",
+      "value_redacted": "Demo Cafe",
+      "screenshot_path": null,
+      "timestamp": null
+    },
+    {
+      "step_index": 3,
+      "url": "/expense/new",
+      "action": "type",
+      "element_text": null,
+      "field_label": "date",
+      "value_redacted": "2025-02-20",
+      "screenshot_path": null,
+      "timestamp": null
+    },
+    {
+      "step_index": 4,
+      "url": "/expense/new",
+      "action": "select",
+      "element_text": null,
+      "field_label": "category",
+      "value_redacted": "Meals",
+      "screenshot_path": null,
+      "timestamp": null
+    }
+  ],
+  "metadata": {
+    "source": "receipt_upload"
+  }
+}

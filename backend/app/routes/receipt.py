@@ -1,8 +1,8 @@
-"""Receipt upload logic: parse image, create session, run inference."""
+"""Receipt upload: parse image, create session, run inference."""
 
 import uuid
 
-from fastapi import HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.logging_config import get_logger
 from app.models import CaptureSession, CaptureStep
@@ -12,13 +12,15 @@ from app.services.storage import sessions_dir, workflows_dir, write_json
 
 logger = get_logger(__name__)
 
+router = APIRouter(prefix="/capture", tags=["capture"])
+
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 MAX_FILE_BYTES = 10 * 1024 * 1024  # 10MB
 
 
 def _synthetic_steps(extracted: dict) -> list[dict]:
     """Build CaptureStep-like dicts from extracted receipt fields."""
-    steps = [
+    return [
         {
             "step_index": 0,
             "url": "/expense/dashboard",
@@ -70,10 +72,10 @@ def _synthetic_steps(extracted: dict) -> list[dict]:
             "timestamp": None,
         },
     ]
-    return steps
 
 
-async def process_receipt_upload(file: UploadFile) -> dict:
+@router.post("/receipt")
+async def post_capture_receipt(file: UploadFile = File(...)) -> dict:
     """
     Upload receipt image: extract fields (Nova 2 Lite multimodal or mock), create
     CaptureSession, run inference, store workflow. Returns session_id, extracted, workflow_inferred.
@@ -87,7 +89,7 @@ async def process_receipt_upload(file: UploadFile) -> dict:
     if len(body) > MAX_FILE_BYTES:
         raise HTTPException(
             status_code=400,
-            detail=f"File too large. Max size: {MAX_FILE_BYTES // (1024*1024)}MB",
+            detail=f"File too large. Max size: {MAX_FILE_BYTES // (1024 * 1024)}MB",
         )
     logger.info(
         "receipt_upload_received",
@@ -98,7 +100,11 @@ async def process_receipt_upload(file: UploadFile) -> dict:
     session_id = f"receipt_{uuid.uuid4().hex[:12]}"
     steps_data = _synthetic_steps(extracted)
     steps = [CaptureStep.model_validate(s) for s in steps_data]
-    session = CaptureSession(session_id=session_id, steps=steps, metadata={"source": "receipt_upload"})
+    session = CaptureSession(
+        session_id=session_id,
+        steps=steps,
+        metadata={"source": "receipt_upload"},
+    )
     session_path = sessions_dir() / f"{session_id}.json"
     write_json(session_path, session.model_dump(mode="json"))
     workflow = infer_workflow(session)

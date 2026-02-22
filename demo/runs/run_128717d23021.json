@@ -1,0 +1,21 @@
+{
+  "status": "completed",
+  "confirmation_id": "EXP-2026-875829",
+  "run_id": "run_128717d23021",
+  "run_log": [
+    "[simulate] Starting agent: Submit expense (inferred)",
+    "[simulate] Run ID: run_128717d23021",
+    "[simulate] Parameters: {'amount': '100'}",
+    "[simulate] Step 1: navigate \u2013 Navigate to the expense application entry URL",
+    "[simulate] Step 2: open_form \u2013 Open the new expense form (e.g. click 'New expense')",
+    "[simulate] Step 3: upload_receipt \u2013 Upload or attach the receipt file",
+    "[simulate] Step 4: fill_field \u2013 Fill amount, date, category, and description fields",
+    "[simulate] Step 5: submit_form \u2013 Submit the expense form",
+    "[simulate] Step 5 failed: element not found",
+    "[simulate] UI changed: Submit renamed to Confirm",
+    "[simulate] Step 5 retry: Click Confirm to send.",
+    "[simulate] Step 6: confirmation \u2013 Confirm submission if a confirmation step is shown",
+    "[simulate] All steps completed.",
+    "[simulate] Confirmation ID: EXP-2026-875829"
+  ]
+}

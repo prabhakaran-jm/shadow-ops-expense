@@ -1,0 +1,92 @@
+{
+  "agent_id": "agent_receipt_080eebb363ab_801d6932",
+  "name": "Submit expense (inferred)",
+  "description": "Creates a new expense, uploads receipt, fills amount, date, category and description, then submits and confirms. Inferred from capture session.",
+  "parameter_schema": {
+    "type": "object",
+    "properties": {
+      "amount": {
+        "type": "number",
+        "description": "Parameter: amount",
+        "example": "125.50"
+      },
+      "date": {
+        "type": "date",
+        "description": "Parameter: date",
+        "example": "2025-02-20"
+      },
+      "category": {
+        "type": "string",
+        "description": "Parameter: category",
+        "example": "Travel"
+      },
+      "description": {
+        "type": "string",
+        "description": "Parameter: description",
+        "example": "Client meeting"
+      },
+      "receipt_file": {
+        "type": "string",
+        "description": "Parameter: receipt_file",
+        "example": "receipt.pdf"
+      }
+    },
+    "required": [
+      "amount",
+      "date",
+      "category",
+      "receipt_file"
+    ]
+  },
+  "steps": [
+    {
+      "order": 1,
+      "intent": "navigate",
+      "instruction": "Navigate to the expense application entry URL",
+      "selector_hint": null,
+      "uses_parameters": []
+    },
+    {
+      "order": 2,
+      "intent": "open_form",
+      "instruction": "Open the new expense form (e.g. click 'New expense')",
+      "selector_hint": null,
+      "uses_parameters": []
+    },
+    {
+      "order": 3,
+      "intent": "upload_receipt",
+      "instruction": "Upload or attach the receipt file",
+      "selector_hint": null,
+      "uses_parameters": [
+        "receipt_file"
+      ]
+    },
+    {
+      "order": 4,
+      "intent": "fill_field",
+      "instruction": "Fill amount, date, category, and description fields",
+      "selector_hint": null,
+      "uses_parameters": [
+        "amount",
+        "date",
+        "category",
+        "description"
+      ]
+    },
+    {
+      "order": 5,
+      "intent": "submit_form",
+      "instruction": "Submit the expense form",
+      "selector_hint": null,
+      "uses_parameters": []
+    },
+    {
+      "order": 6,
+      "intent": "confirmation",
+      "instruction": "Confirm submission if a confirmation step is shown",
+      "selector_hint": null,
+      "uses_parameters": []
+    }
+  ]
+}

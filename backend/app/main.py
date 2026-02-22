@@ -6,12 +6,12 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import router
 from app.config import settings
 from app.routes.agents import router as agents_router
 from app.routes.capture import router as capture_router
 from app.routes.infer import router as infer_router
 from app.routes.schemas import router as schemas_router
+from app.routes.receipt import router as receipt_router
 from app.routes.workflows import router as workflows_router
 from app.logging_config import get_logger, setup_logging
 
@@ -42,13 +42,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# All API routes live under /api (health, capture, infer, workflows, agents, schemas)
-app.include_router(router)  # /api/health
+# All API routes live under /api (capture, infer, workflows, agents, schemas)
 app.include_router(schemas_router, prefix="/api")
 app.include_router(capture_router, prefix="/api")
 app.include_router(infer_router, prefix="/api")
 app.include_router(workflows_router, prefix="/api")
 app.include_router(agents_router, prefix="/api")
+app.include_router(receipt_router, prefix="/api")
 
 
 @app.get("/")
@@ -58,4 +58,17 @@ def root() -> dict[str, str]:
         "service": "Shadow Ops – Expense Report Shadow",
         "docs": "/docs",
         "health": "/api/health",
+    }
+
+
+@app.get("/api/health")
+def get_health() -> dict[str, str]:
+    """Health check for load balancers and monitoring; includes mode, region, model_id."""
+    return {
+        "status": "ok",
+        "service": "shadow-ops-expense",
+        "version": "0.1.0",
+        "mode": settings.nova_mode,
+        "region": settings.aws_region,
+        "model_id": settings.nova_model_id_lite,
     }

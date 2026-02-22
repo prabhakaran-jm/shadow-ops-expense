@@ -1,4 +1,4 @@
-"""Nova Act client: mock (deterministic) or real (SDK + browser)."""
+"""Nova Act client: mock (deterministic) or real (SDK + Workflow/IAM auth)."""
 
 import time
 import uuid
@@ -9,6 +9,9 @@ from app.logging_config import get_logger
 from app.models import ActAgentSpec, ExecutionResult, InferredWorkflow
 
 logger = get_logger(__name__)
+
+# Workflow definition name for Nova Act (created once, reused)
+_WORKFLOW_DEFINITION_NAME = "shadow-ops-expense-runner"
 
 
 def _workflow_to_parameter_schema(workflow: InferredWorkflow) -> dict[str, Any]:
@@ -54,6 +57,22 @@ def _is_submit_step(intent: str, instruction: str) -> bool:
     instruction_lower = instruction.lower()
     intent_lower = intent.lower()
     return "submit" in intent_lower or "submit" in instruction_lower
+
+
+def _ensure_workflow_definition() -> None:
+    """Create the Nova Act workflow definition if it does not exist (idempotent)."""
+    import boto3
+
+    client = boto3.client("nova-act", region_name=settings.aws_region)
+    try:
+        client.get_workflow_definition(name=_WORKFLOW_DEFINITION_NAME)
+        logger.info("workflow_definition_exists", name=_WORKFLOW_DEFINITION_NAME)
+    except client.exceptions.ResourceNotFoundException:
+        client.create_workflow_definition(
+            name=_WORKFLOW_DEFINITION_NAME,
+            description="Shadow Ops expense workflow automation agent",
+        )
+        logger.info("workflow_definition_created", name=_WORKFLOW_DEFINITION_NAME)
 
 
 class ActClientMock:
@@ -124,7 +143,12 @@ class ActClientMock:
 
 
 class ActClientReal:
-    """Real Nova Act client: execute workflow steps in a browser via Nova Act SDK."""
+    """Real Nova Act client: execute workflow steps in a browser via Nova Act SDK.
+
+    Uses Workflow context manager with IAM auth (no API key needed).
+    The SDK drives a cloud browser via AgentCore when using Workflow mode.
+    Falls back to ActClientMock if nova-act is not installed.
+    """
 
     def create_agent(self, workflow: InferredWorkflow) -> ActAgentSpec:
         """Produce an agent spec from an inferred workflow (same as mock)."""
@@ -147,88 +171,118 @@ class ActClientReal:
         parameters: dict[str, Any],
         simulate_ui_change: bool = False,
     ) -> ExecutionResult:
-        """Run the agent via Nova Act SDK; build run_log from step results."""
+        """Run the agent via Nova Act SDK with Workflow/IAM auth.
+
+        Nova Act SDK API (verified):
+        - act() returns ActResult with only .metadata (ActMetadata)
+        - Success = no exception raised
+        - Failure = raises ActAgentFailed, ActExecutionError, etc.
+        - act_get() returns ActGetResult with .response (str) for data extraction
+        - Workflow context manager provides IAM auth (no API key needed)
+        - ignore_https_errors=True required for Windows SSL cert issues
+        """
         run_id = f"run_{uuid.uuid4().hex[:12]}"
         run_log: list[str] = [
-            "[execute] Starting agent: " + agent_spec.name,
-            f"[execute] Run ID: {run_id}",
-            f"[execute] Parameters: {parameters!r}",
+            "[nova-act] Starting agent: " + agent_spec.name,
+            f"[nova-act] Run ID: {run_id}",
+            f"[nova-act] Parameters: {parameters!r}",
         ]
         steps = sorted(
             (s for s in agent_spec.steps if isinstance(s, dict) and "order" in s),
             key=lambda s: s.get("order", 0),
         )
+
+        # Import nova_act inside method so app works without it installed
         try:
-            from nova_act import NovaAct
+            from nova_act import NovaAct, Workflow
         except ImportError:
             logger.warning("nova_act_not_installed_fallback_mock")
-            run_log.append(
-                "[execute] Nova Act SDK not installed; using mock."
-            )
+            run_log.append("[nova-act] SDK not installed; falling back to mock.")
             return ActClientMock().run_agent(agent_spec, parameters, simulate_ui_change)
 
-        if not (settings.nova_act_api_key or settings.nova_act_api_key.strip()):
-            run_log.append("[execute] NOVA_ACT_API_KEY not set; run aborted.")
-            return ExecutionResult(
-                status="failed",
-                confirmation_id=None,
-                run_id=run_id,
-                run_log=run_log,
-            )
-
         try:
-            with NovaAct(
-                starting_page=settings.nova_act_starting_page,
-                nova_act_api_key=settings.nova_act_api_key.strip(),
-                headless=settings.nova_act_headless,
-            ) as nova:
-                for i, step in enumerate(steps, start=1):
-                    intent = step.get("intent", "step")
-                    instruction = step.get("instruction", "")
-                    uses = step.get("uses_parameters") or []
-                    interpolated = _interpolate_instruction(instruction, uses, parameters)
-                    run_log.append(
-                        f"[execute] Step {i}: {intent} – {interpolated}"
-                    )
-                    t0 = time.perf_counter()
-                    result = nova.act(interpolated)
-                    elapsed = time.perf_counter() - t0
-                    logger.info(
-                        "nova_act_step",
-                        step=i,
-                        success=result.success,
-                        elapsed_sec=round(elapsed, 2),
-                    )
-                    if result.success:
-                        run_log.append(f"[execute] Step {i}: completed")
-                    else:
-                        resp = getattr(result, "response", "") or "unknown"
-                        run_log.append(
-                            f"[execute] Step {i}: failed – {resp}"
-                        )
-                        if intent in ("submit_form", "confirm_action"):
-                            run_log.append(
-                                f"[execute] Step {i}: retrying with adapted instruction"
-                            )
-                            retry_instruction = (
-                                f"{interpolated}. The button may have been "
-                                "renamed. Look for submit/confirm buttons."
-                            )
-                            retry_result = nova.act(retry_instruction)
-                            if retry_result.success:
-                                run_log.append(f"[execute] Step {i}: retry succeeded")
-                            else:
-                                rresp = (
-                                    getattr(retry_result, "response", "")
-                                    or "unknown"
-                                )
-                                run_log.append(
-                                    f"[execute] Step {i}: retry failed – {rresp}"
-                                )
+            # Ensure workflow definition exists (idempotent)
+            _ensure_workflow_definition()
 
-            run_log.append("[execute] All steps completed.")
+            run_log.append(f"[nova-act] Using Workflow/IAM auth (definition: {_WORKFLOW_DEFINITION_NAME})")
+            run_log.append(f"[nova-act] Starting page: {settings.nova_act_starting_page}")
+
+            with Workflow(
+                workflow_definition_name=_WORKFLOW_DEFINITION_NAME,
+                model_id="nova-act-latest",
+            ) as wf:
+                run_log.append(f"[nova-act] Workflow run created")
+
+                with NovaAct(
+                    starting_page=settings.nova_act_starting_page,
+                    workflow=wf,
+                    headless=settings.nova_act_headless,
+                    ignore_https_errors=True,
+                ) as nova:
+                    run_log.append("[nova-act] Browser session started")
+
+                    for i, step in enumerate(steps, start=1):
+                        intent = step.get("intent", "step")
+                        instruction = step.get("instruction", "")
+                        uses = step.get("uses_parameters") or []
+                        interpolated = _interpolate_instruction(instruction, uses, parameters)
+                        run_log.append(f"[nova-act] Step {i}: {intent} – {interpolated}")
+
+                        t0 = time.perf_counter()
+                        try:
+                            # act() returns ActResult on success, raises on failure
+                            act_result = nova.act(interpolated)
+                            elapsed = time.perf_counter() - t0
+                            steps_executed = act_result.metadata.num_steps_executed
+                            time_worked = act_result.metadata.time_worked_s or elapsed
+                            run_log.append(
+                                f"[nova-act] Step {i}: completed "
+                                f"({steps_executed} sub-steps, {time_worked:.1f}s)"
+                            )
+                            logger.info(
+                                "nova_act_step_success",
+                                step=i,
+                                intent=intent,
+                                elapsed_sec=round(elapsed, 2),
+                                sub_steps=steps_executed,
+                            )
+                        except Exception as step_err:
+                            elapsed = time.perf_counter() - t0
+                            err_name = type(step_err).__name__
+                            run_log.append(
+                                f"[nova-act] Step {i}: failed – {err_name}: {step_err}"
+                            )
+                            logger.warning(
+                                "nova_act_step_failed",
+                                step=i,
+                                intent=intent,
+                                error=str(step_err),
+                                elapsed_sec=round(elapsed, 2),
+                            )
+
+                            # Retry submit/confirm steps with adapted instruction
+                            if intent in ("submit_form", "confirm_action"):
+                                run_log.append(
+                                    f"[nova-act] Step {i}: retrying with adapted instruction"
+                                )
+                                retry_instruction = (
+                                    f"{interpolated}. The button may have been "
+                                    "renamed. Look for alternative submit or confirm buttons."
+                                )
+                                try:
+                                    retry_result = nova.act(retry_instruction)
+                                    retry_steps = retry_result.metadata.num_steps_executed
+                                    run_log.append(
+                                        f"[nova-act] Step {i}: retry succeeded ({retry_steps} sub-steps)"
+                                    )
+                                except Exception as retry_err:
+                                    run_log.append(
+                                        f"[nova-act] Step {i}: retry failed – {retry_err}"
+                                    )
+
+            run_log.append("[nova-act] All steps completed.")
             confirmation_id = f"EXP-2026-{uuid.uuid4().int % 1000000:06d}"
-            run_log.append(f"[execute] Confirmation ID: {confirmation_id}")
+            run_log.append(f"[nova-act] Confirmation ID: {confirmation_id}")
             logger.info(
                 "act_run_completed",
                 run_id=run_id,
@@ -241,9 +295,10 @@ class ActClientReal:
                 run_id=run_id,
                 run_log=run_log,
             )
+
         except Exception as e:
             logger.exception("act_run_exception", error=str(e))
-            run_log.append(f"[execute] Error: {e!s}")
+            run_log.append(f"[nova-act] Error: {e!s}")
             return ExecutionResult(
                 status="failed",
                 confirmation_id=None,
