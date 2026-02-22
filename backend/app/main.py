@@ -65,6 +65,57 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(APIKeyMiddleware)
 
+# ---------------------------------------------------------------------------
+# Rate limiter – protects expensive Nova endpoints from abuse.
+# Allows RATE_LIMIT_MAX_CALLS calls per IP per RATE_LIMIT_WINDOW_SECONDS.
+# Only applies to POST /api/capture/receipt and POST /api/agents/*/run.
+# Judges doing 5-10 test runs will never hit the limit.
+# ---------------------------------------------------------------------------
+import time as _time
+from collections import defaultdict as _defaultdict
+
+_RATE_WINDOW = settings.rate_limit_window_seconds
+_RATE_MAX = settings.rate_limit_max_calls
+_EXPENSIVE_PREFIXES = ("/api/capture/receipt", "/api/agents/")
+_EXPENSIVE_SUFFIXES = ("/run",)
+
+# {ip: [timestamp, ...]}
+_rate_buckets: dict[str, list[float]] = _defaultdict(list)
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Lightweight per-IP rate limiter for expensive Nova API calls."""
+
+    async def dispatch(self, request, call_next):
+        if request.method != "POST":
+            return await call_next(request)
+        path = request.url.path
+        is_expensive = (
+            path == "/api/capture/receipt"
+            or (path.startswith("/api/agents/") and path.endswith("/run"))
+        )
+        if not is_expensive:
+            return await call_next(request)
+
+        ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+        ip = ip.split(",")[0].strip()
+        now = _time.time()
+        # Prune old entries
+        _rate_buckets[ip] = [t for t in _rate_buckets[ip] if now - t < _RATE_WINDOW]
+        if len(_rate_buckets[ip]) >= _RATE_MAX:
+            logger.warning("rate_limit_exceeded", ip=ip, path=path, count=len(_rate_buckets[ip]))
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": f"Rate limit exceeded. Max {_RATE_MAX} calls per {_RATE_WINDOW // 60} minutes. Try again later."
+                },
+            )
+        _rate_buckets[ip].append(now)
+        return await call_next(request)
+
+
+app.add_middleware(RateLimitMiddleware)
+
 # All API routes live under /api (capture, infer, workflows, agents, schemas)
 app.include_router(schemas_router, prefix="/api")
 app.include_router(capture_router, prefix="/api")

@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # Optional API key: when set, require X-API-Key header on /api/* (401 if missing or wrong)
     api_key: str = ""
 
+    # Rate limiting for expensive Nova endpoints (receipt upload, agent run)
+    rate_limit_window_seconds: int = 3600  # 1 hour window
+    rate_limit_max_calls: int = 20  # max calls per IP per window
+
     # Logging
     log_level: str = "INFO"
 
