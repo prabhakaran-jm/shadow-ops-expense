@@ -20,15 +20,12 @@ AI-powered expense automation that combines **Amazon Nova 2 Lite** (multimodal r
 
 ## Screenshots
 
-*(Add 3–5 screenshots for submission; place files in `docs/screenshots/` or link here.)*
-
 | # | Description | Filename |
 |---|-------------|----------|
 | 1 | Dashboard – workflow list and selection | `docs/screenshots/01-dashboard-workflow-list.png` |
 | 2 | Workflow detail – parameters and steps | `docs/screenshots/02-workflow-detail.png` |
 | 3 | Run Agent modal – parameter form | `docs/screenshots/03-run-agent-modal.png` |
 | 4 | Run result – confirmation and run log | `docs/screenshots/04-run-result.png` |
-| 5 | Run log with UI-change adaptation highlighted | `docs/screenshots/05-run-log-adaptation.png` |
 
 ## Project structure
 
@@ -44,7 +41,7 @@ shadow-ops-expense/
 
 ## Prerequisites
 
-- **Python 3.11+** (backend)
+- **Python 3.12+** (backend)
 - **Node.js 18+** (frontend)
 
 ## Setup
@@ -194,7 +191,7 @@ For a **Terraform-defined** stack (ECR, App Runner, S3, CloudFront), see **[infr
 
 ## Blog post
 
-- **Submission / blog:** [AWS Builder Experience](https://builder.aws.com) or your submission URL (placeholder – add link when published).
+- **Blog:** [AWS Builder Experience](https://builder.aws.com/content/3A2YmIl1jbE97deeHGDSWYxdHEX/building-shadow-ops-automating-expense-reports-with-amazon-nova-2-lite-and-nova-act)
 
 ## Documentation
 

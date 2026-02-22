@@ -8,7 +8,6 @@ Capture these views from the Shadow Ops dashboard for hackathon submission. Plac
 | 2 | **Workflow detail** – Single workflow view with parameters (amount, date, category, etc.) and steps (navigate, open form, upload receipt, fill fields, submit, confirmation). | `02-workflow-detail.png` |
 | 3 | **Run Agent modal** – The "Run Agent" / Execute modal with the parameter form filled (e.g. amount, date, category, description, receipt file) and optional "Simulate UI change" checkbox. | `03-run-agent-modal.png` |
 | 4 | **Run result** – After a run completes: confirmation ID (e.g. EXP-2026-000123), run ID, and the full run log. | `04-run-result.png` |
-| 5 | **Run log with UI-change adaptation** – Same run result view after a run *with* "Simulate UI change" enabled, with the self-healing lines highlighted (e.g. "Step failed: element not found", "UI changed: Submit renamed to Confirm", "Step retry: Click Confirm"). | `05-run-log-adaptation.png` |
 
 **Tips**
 

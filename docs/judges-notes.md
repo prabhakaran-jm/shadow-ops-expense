@@ -51,7 +51,7 @@ The system supports two modes controlled by environment variables. **Both modes 
 ### Option A – Deployed (Real Nova Mode)
 
 The app is deployed and live:
-- **Frontend**: `https://ducl3aq6jplo1.cloudfront.net`
+- **Frontend**: S3 + CloudFront
 - **Backend**: App Runner (auto-scales, accessed via CloudFront or direct)
 
 Steps:
