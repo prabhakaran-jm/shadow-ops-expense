@@ -91,7 +91,7 @@ async function pollRunResult(
   sessionId: string,
   runId: string,
   onTick?: () => void,
-  maxWaitMs = 5 * 60 * 1000,
+  maxWaitMs = 8 * 60 * 1000,
   intervalMs = 3000,
 ): Promise<ExecutionResult> {
   const deadline = Date.now() + maxWaitMs
@@ -103,7 +103,7 @@ async function pollRunResult(
     )
     if (res.status !== 'running') return res as ExecutionResult
   }
-  throw new Error('Agent execution timed out (5 min). Check server logs for status.')
+  throw new Error('Agent execution timed out (8 min). Check server logs for status.')
 }
 
 export async function runAgent(

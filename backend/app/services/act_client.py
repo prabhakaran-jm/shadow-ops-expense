@@ -189,6 +189,9 @@ class ActClientReal:
         )
         return spec
 
+    # Intents that are skipped because the browser already starts on the target page
+    _SKIP_INTENTS = {"navigate", "open_form"}
+
     def run_agent(
         self,
         agent_spec: ActAgentSpec,
@@ -235,7 +238,7 @@ class ActClientReal:
                 workflow_definition_name=_WORKFLOW_DEFINITION_NAME,
                 model_id="nova-act-latest",
             ) as wf:
-                run_log.append(f"[nova-act] Workflow run created")
+                run_log.append("[nova-act] Workflow run created")
 
                 with NovaAct(
                     starting_page=settings.nova_act_starting_page,
@@ -244,17 +247,38 @@ class ActClientReal:
                     ignore_https_errors=True,
                 ) as nova:
                     run_log.append("[nova-act] Browser session started")
+                    run_log.append(
+                        f"[nova-act] Already on target page: {settings.nova_act_starting_page}"
+                    )
 
                     for i, step in enumerate(steps, start=1):
                         intent = step.get("intent", "step")
                         instruction = step.get("instruction", "")
                         uses = step.get("uses_parameters") or []
                         interpolated = _interpolate_instruction(instruction, uses, parameters)
+
+                        # Skip navigate/open_form — browser already starts on target page
+                        if intent in self._SKIP_INTENTS:
+                            run_log.append(
+                                f"[nova-act] Step {i}: SKIPPED ({intent}) – "
+                                "browser already on target page"
+                            )
+                            logger.info(
+                                "nova_act_step_skipped",
+                                step=i,
+                                intent=intent,
+                                reason="browser_already_on_page",
+                            )
+                            continue
+
+                        # Enhance instructions with page-specific context
+                        interpolated = self._enhance_instruction(
+                            intent, interpolated, parameters
+                        )
                         run_log.append(f"[nova-act] Step {i}: {intent} – {interpolated}")
 
                         t0 = time.perf_counter()
                         try:
-                            # act() returns ActResult on success, raises on failure
                             act_result = nova.act(interpolated)
                             elapsed = time.perf_counter() - t0
                             steps_executed = act_result.metadata.num_steps_executed
@@ -285,7 +309,7 @@ class ActClientReal:
                             )
 
                             # Retry submit/confirm steps with adapted instruction
-                            if intent in ("submit_form", "confirm_action"):
+                            if intent in ("submit_form", "confirm_action", "confirmation"):
                                 run_log.append(
                                     f"[nova-act] Step {i}: retrying with adapted instruction"
                                 )
@@ -304,8 +328,10 @@ class ActClientReal:
                                         f"[nova-act] Step {i}: retry failed – {retry_err}"
                                     )
 
+                    # Extract confirmation ID from the page if visible
+                    confirmation_id = self._extract_confirmation_id(nova, run_log)
+
             run_log.append("[nova-act] All steps completed.")
-            confirmation_id = f"EXP-2026-{uuid.uuid4().int % 1000000:06d}"
             run_log.append(f"[nova-act] Confirmation ID: {confirmation_id}")
             logger.info(
                 "act_run_completed",
@@ -329,6 +355,79 @@ class ActClientReal:
                 run_id=run_id,
                 run_log=run_log,
             )
+
+    @staticmethod
+    def _enhance_instruction(
+        intent: str, instruction: str, parameters: dict[str, Any]
+    ) -> str:
+        """Add page-specific context to make Nova Act instructions more precise.
+
+        The inferred workflow instructions are generic (e.g. "Fill amount, date").
+        We enhance them with specific form field details for the target expense page.
+        """
+        if intent == "fill_field":
+            # Be explicit about which fields to fill and how
+            parts = [
+                "On this expense form page, fill in the following fields:"
+            ]
+            field_map = {
+                "amount": ("Amount ($)", "number input"),
+                "date": ("Date", "date input"),
+                "category": ("Category", "select dropdown"),
+                "description": ("Description", "textarea"),
+                "merchant": ("Merchant", "text input"),
+            }
+            for param_name, (label, field_type) in field_map.items():
+                val = parameters.get(param_name)
+                if val is not None and val != "":
+                    parts.append(f'Set the "{label}" {field_type} to "{val}".')
+            return " ".join(parts)
+
+        if intent == "upload_receipt":
+            receipt = parameters.get("receipt_file", "")
+            if receipt:
+                return (
+                    f'Click the receipt upload area and upload the file "{receipt}". '
+                    "If the file picker appears, select the file."
+                )
+            return instruction
+
+        if intent == "submit_form":
+            return (
+                'Click the "Submit Expense" button at the bottom of the form. '
+                "A confirmation modal will appear."
+            )
+
+        if intent == "confirmation":
+            return (
+                'A confirmation modal is showing the expense summary. '
+                'Click the "Confirm" button to finalize the submission.'
+            )
+
+        return instruction
+
+    @staticmethod
+    def _extract_confirmation_id(nova, run_log: list[str]) -> str:
+        """Try to read the confirmation ID from the page using act_get().
+
+        Falls back to a generated ID if extraction fails.
+        """
+        fallback_id = f"EXP-2026-{uuid.uuid4().int % 1000000:06d}"
+        try:
+            get_result = nova.act_get(
+                "Read the confirmation ID shown on the success banner. "
+                "It should look like EXP-YYYY-NNNNNN. Return only the ID text."
+            )
+            if get_result.response and "EXP-" in get_result.response:
+                extracted = get_result.response.strip()
+                run_log.append(f"[nova-act] Extracted confirmation ID from page: {extracted}")
+                logger.info("confirmation_id_extracted", confirmation_id=extracted)
+                return extracted
+            run_log.append("[nova-act] No confirmation ID found on page; using generated ID")
+        except Exception as e:
+            run_log.append(f"[nova-act] Could not extract confirmation ID: {e}")
+            logger.warning("confirmation_id_extraction_failed", error=str(e))
+        return fallback_id
 
 
 def get_act_client() -> ActClientMock | ActClientReal:

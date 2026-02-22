@@ -3,6 +3,7 @@
 import threading
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.logging_config import get_logger
 from app.models import ActAgentSpec, ExecutionRequest, ExecutionResult, InferredWorkflow
@@ -68,7 +69,6 @@ def _run_agent_background(
     """Execute agent in a background thread; write result to disk when done."""
     try:
         result = act_client.run_agent(agent_spec, parameters, simulate_ui_change)
-        # Override run_id to match the one we returned to the client
         result_dict = result.model_dump(mode="json")
         result_dict["run_id"] = run_id
         run_path = runs_dir() / f"{run_id}.json"
@@ -91,10 +91,12 @@ def _run_agent_background(
 @router.post("/{session_id}/run")
 def post_agents_run(session_id: str, body: ExecutionRequest) -> dict:
     """
-    Start agent execution. In real mode (Nova Act), runs asynchronously in a
-    background thread and returns immediately with run_id + status='running'.
-    In mock mode, runs synchronously and returns the full result.
-    Poll GET /agents/{session_id}/run/{run_id} for the result.
+    Execute agent. Runs synchronously for mock/simulate, async for real Nova Act.
+
+    For real Nova Act mode (without simulate), launches a background thread
+    and returns {status: 'running', run_id: '...'}. Poll the GET endpoint.
+
+    For mock mode or simulate, returns the full result synchronously.
     """
     agent_path = agents_dir() / f"{session_id}.agent.json"
     if not agent_path.exists():
@@ -107,12 +109,11 @@ def post_agents_run(session_id: str, body: ExecutionRequest) -> dict:
     agent_data = read_json(agent_path)
     agent_spec = ActAgentSpec.model_validate(agent_data)
 
-    # Check if this is real Nova Act mode (needs async) or mock (fast, sync)
     from app.config import settings
     is_real = (settings.nova_act_mode or "mock").strip().lower() == "real"
 
     if is_real and not body.simulate_ui_change:
-        # Async: launch in background thread, return run_id immediately
+        # Real Nova Act: run in background thread to avoid App Runner timeout
         import uuid
         run_id = f"run_{uuid.uuid4().hex[:12]}"
         _pending_runs[run_id] = {"session_id": session_id, "status": "running"}
@@ -120,7 +121,7 @@ def post_agents_run(session_id: str, body: ExecutionRequest) -> dict:
         thread = threading.Thread(
             target=_run_agent_background,
             args=(session_id, run_id, agent_spec, body.parameters, body.simulate_ui_change),
-            daemon=True,
+            daemon=False,  # Non-daemon so it survives after response
         )
         thread.start()
         logger.info("agent_run_started_async", session_id=session_id, run_id=run_id)
@@ -128,10 +129,16 @@ def post_agents_run(session_id: str, body: ExecutionRequest) -> dict:
         return {
             "status": "running",
             "run_id": run_id,
-            "message": "Agent execution started. Poll GET /api/agents/{session_id}/run/{run_id} for result.",
+            "confirmation_id": None,
+            "run_log": [
+                f"[nova-act] Agent execution started in background",
+                f"[nova-act] Run ID: {run_id}",
+                f"[nova-act] Poll GET /api/agents/{session_id}/run/{run_id} for result",
+            ],
+            "message": "Agent execution started. Polling for result...",
         }
     else:
-        # Sync: mock mode or simulate_ui_change — returns immediately
+        # Sync: mock mode or simulate_ui_change
         result = act_client.run_agent(
             agent_spec,
             body.parameters,
@@ -161,6 +168,6 @@ def get_agent_run_status(session_id: str, run_id: str) -> dict:
     # Check in-memory pending status
     pending = _pending_runs.get(run_id)
     if pending and pending["status"] == "running":
-        return {"status": "running", "run_id": run_id}
+        return {"status": "running", "run_id": run_id, "confirmation_id": None, "run_log": []}
 
     raise HTTPException(status_code=404, detail="Run not found")
