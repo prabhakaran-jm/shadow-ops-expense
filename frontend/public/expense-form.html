@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acme Corp – New Expense</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f6f9; color: #1a1a2e; }
+    .navbar { background: #1a1a2e; color: #fff; padding: 14px 32px; display: flex; align-items: center; gap: 24px; }
+    .navbar .logo { font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+    .navbar a { color: #a0aec0; text-decoration: none; font-size: 14px; }
+    .navbar a.active { color: #fff; border-bottom: 2px solid #4f8cff; padding-bottom: 2px; }
+    .container { max-width: 640px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 28px; }
+    .card { background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+      font-size: 15px; color: #1a1a2e; background: #fff; transition: border 0.15s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: #4f8cff; box-shadow: 0 0 0 3px rgba(79,140,255,0.15);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    textarea { resize: vertical; min-height: 80px; }
+    .file-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; color: #64748b; cursor: pointer; transition: border 0.15s; }
+    .file-upload:hover { border-color: #4f8cff; }
+    .file-upload input { display: none; }
+    .actions { display: flex; gap: 12px; margin-top: 28px; }
+    .btn { padding: 10px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-primary { background: #4f8cff; color: #fff; }
+    .btn-primary:hover { background: #3b7bef; }
+    .btn-secondary { background: #f1f5f9; color: #374151; border: 1px solid #d1d5db; }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    /* Success state */
+    .success-banner { display: none; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 12px; padding: 24px; text-align: center; margin-top: 20px; }
+    .success-banner.visible { display: block; }
+    .success-banner .check { font-size: 40px; margin-bottom: 8px; }
+    .success-banner h2 { color: #065f46; font-size: 20px; margin-bottom: 4px; }
+    .success-banner .conf-id { font-family: monospace; font-size: 18px; color: #047857; font-weight: 700; }
+    .success-banner p { color: #064e3b; font-size: 14px; margin-top: 8px; }
+
+    /* Confirmation modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.visible { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 32px; max-width: 420px; width: 90%; text-align: center; }
+    .modal h2 { margin-bottom: 12px; }
+    .modal .summary { text-align: left; background: #f8fafc; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 14px; line-height: 1.8; }
+    .modal .modal-actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <span class="logo">Acme Corp</span>
+    <a href="#">Dashboard</a>
+    <a href="#" class="active">New Expense</a>
+    <a href="#">History</a>
+    <a href="#">Settings</a>
+  </nav>
+
+  <div class="container">
+    <h1>New Expense Report</h1>
+    <p class="subtitle">Fill in the details below to submit your expense for approval.</p>
+
+    <div class="card" id="expenseForm">
+      <form id="form" onsubmit="return showConfirmation()">
+        <div class="form-group">
+          <label for="amount">Amount ($)</label>
+          <input type="number" id="amount" name="amount" placeholder="0.00" step="0.01" required />
+        </div>
+
+        <div class="form-group">
+          <label for="merchant">Merchant</label>
+          <input type="text" id="merchant" name="merchant" placeholder="e.g. Cafe Roma" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" required />
+          </div>
+          <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="">Select...</option>
+              <option value="Travel">Travel</option>
+              <option value="Meals">Meals</option>
+              <option value="Office">Office Supplies</option>
+              <option value="Transport">Transport</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description (optional)</label>
+          <textarea id="description" name="description" placeholder="Brief description of the expense..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Receipt</label>
+          <div class="file-upload" onclick="document.getElementById('receipt').click()">
+            <input type="file" id="receipt" accept="image/*" />
+            <p id="fileLabel">Click or drag to upload receipt image</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="submitBtn">Submit Expense</button>
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('form').reset()">Clear</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="success-banner" id="successBanner">
+      <div class="check">&#10003;</div>
+      <h2>Expense Submitted</h2>
+      <div class="conf-id" id="confId"></div>
+      <p>Your expense has been submitted for manager approval. You'll receive a notification once it's processed.</p>
+    </div>
+  </div>
+
+  <!-- Confirmation modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+      <h2>Confirm Submission</h2>
+      <p>Please review the expense details:</p>
+      <div class="summary" id="summaryContent"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="confirmBtn" onclick="confirmSubmit()">Confirm</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // File upload label
+    document.getElementById('receipt').addEventListener('change', function() {
+      const label = document.getElementById('fileLabel');
+      label.textContent = this.files.length ? this.files[0].name : 'Click or drag to upload receipt image';
+    });
+
+    // Set today's date as default
+    document.getElementById('date').valueAsDate = new Date();
+
+    function showConfirmation() {
+      const amount = document.getElementById('amount').value;
+      const merchant = document.getElementById('merchant').value;
+      const date = document.getElementById('date').value;
+      const category = document.getElementById('category').value;
+      const desc = document.getElementById('description').value;
+
+      document.getElementById('summaryContent').innerHTML =
+        '<strong>Amount:</strong> $' + parseFloat(amount).toFixed(2) + '<br>' +
+        '<strong>Merchant:</strong> ' + merchant + '<br>' +
+        '<strong>Date:</strong> ' + date + '<br>' +
+        '<strong>Category:</strong> ' + category +
+        (desc ? '<br><strong>Description:</strong> ' + desc : '');
+
+      document.getElementById('confirmModal').classList.add('visible');
+      return false; // prevent form submit
+    }
+
+    function closeModal() {
+      document.getElementById('confirmModal').classList.remove('visible');
+    }
+
+    function confirmSubmit() {
+      closeModal();
+      // Generate confirmation ID
+      const confId = 'EXP-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      document.getElementById('confId').textContent = confId;
+      document.getElementById('expenseForm').style.display = 'none';
+      document.getElementById('successBanner').classList.add('visible');
+    }
+  </script>
+</body>
+</html>

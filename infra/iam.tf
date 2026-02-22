@@ -86,3 +86,19 @@ resource "aws_iam_role_policy" "apprunner_bedrock" {
     ]
   })
 }
+
+# Nova Act: workflow definitions + agent execution (cloud browser automation)
+resource "aws_iam_role_policy" "apprunner_nova_act" {
+  name   = "nova-act"
+  role   = aws_iam_role.apprunner_instance.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "nova-act:*"
+        Resource = "*"
+      }
+    ]
+  })
+}

@@ -12,11 +12,14 @@ resource "aws_apprunner_service" "backend" {
       image_configuration {
         port = "8000"
         runtime_environment_variables = {
-          NOVA_MODE          = "real"
-          AWS_REGION         = var.region
-          BEDROCK_REGION     = var.region
-          NOVA_MODEL_ID_LITE = "global.amazon.nova-2-lite-v1:0"
-          CORS_ALLOW_ORIGINS = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+          NOVA_MODE              = "real"
+          NOVA_ACT_MODE          = "real"
+          NOVA_ACT_STARTING_PAGE = "https://${aws_cloudfront_distribution.frontend.domain_name}/expense-form.html"
+          NOVA_ACT_HEADLESS      = "true"
+          AWS_REGION             = var.region
+          BEDROCK_REGION         = var.region
+          NOVA_MODEL_ID_LITE     = "global.amazon.nova-2-lite-v1:0"
+          CORS_ALLOW_ORIGINS     = "https://${aws_cloudfront_distribution.frontend.domain_name}"
         }
       }
     }
@@ -28,7 +31,7 @@ resource "aws_apprunner_service" "backend" {
 
   instance_configuration {
     cpu               = "1024"
-    memory            = "2048"
+    memory            = "4096"
     instance_role_arn = aws_iam_role.apprunner_instance.arn
   }
 
