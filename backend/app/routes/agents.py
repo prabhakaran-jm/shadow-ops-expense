@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from app.logging_config import get_logger
 from app.models import ActAgentSpec, ExecutionRequest, ExecutionResult, InferredWorkflow
 from app.services.act_client import get_act_client
+from app.services.notifier import notify_run_completed
 from app.services.storage import (
     agents_dir,
     approvals_dir,
@@ -75,6 +76,8 @@ def _run_agent_background(
         write_json(run_path, result_dict)
         _pending_runs[run_id] = {"session_id": session_id, "status": "completed"}
         logger.info("agent_run_stored", session_id=session_id, run_id=run_id)
+        if result.status == "completed":
+            notify_run_completed(session_id, result.confirmation_id, run_id)
     except Exception as e:
         logger.exception("agent_run_background_error", run_id=run_id, error=str(e))
         error_result = ExecutionResult(
@@ -151,6 +154,8 @@ def post_agents_run(session_id: str, body: ExecutionRequest) -> dict:
             session_id=session_id,
             run_id=result.run_id,
         )
+        if result.status == "completed":
+            notify_run_completed(session_id, result.confirmation_id, result.run_id)
         return result.model_dump(mode="json")
 
 

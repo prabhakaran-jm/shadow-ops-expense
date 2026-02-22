@@ -42,6 +42,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Optional API key gate (only active when API_KEY env is set)
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    """When API_KEY is set, require X-API-Key on /api/*; otherwise pass through."""
+
+    async def dispatch(self, request, call_next):
+        if not settings.api_key or not request.url.path.startswith("/api/"):
+            return await call_next(request)
+        key = request.headers.get("X-API-Key") or request.headers.get("x-api-key")
+        if key != settings.api_key:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing or invalid X-API-Key header"},
+            )
+        return await call_next(request)
+
+
+app.add_middleware(APIKeyMiddleware)
+
 # All API routes live under /api (capture, infer, workflows, agents, schemas)
 app.include_router(schemas_router, prefix="/api")
 app.include_router(capture_router, prefix="/api")

@@ -82,4 +82,5 @@ To use another host/port: `DEMO_BASE_URL=http://localhost:8000/api python backen
 
 - **Agentic AI:** Human-in-the-loop (approve workflow) then automated agent (generate + run with parameters).
 - **UI Automation:** Inferred steps (navigate, fill, submit, etc.); run_log reflects automation; UI-change simulation shows adaptation when “Submit” becomes “Confirm.”
+- **Self-healing:** The **Simulate UI change** option demonstrates the *concept* of self-healing: a step fails (e.g. element not found), the system detects a UI change (e.g. "Submit" renamed to "Confirm"), and the run log shows a retry with the updated instruction. In real Nova Act mode, the agent handles actual DOM changes in the browser.
 - **Multimodal:** Capture session supports `screenshot_path` and field labels; inference prompt and schema support future use of screenshots/vision (Nova 2 Lite extension).

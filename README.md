@@ -95,6 +95,7 @@ Copy `backend/.env.example` to `backend/.env`. Key variables:
 | `NOVA_ACT_REGION` | Nova Act region | `us-east-1` |
 | `NOVA_ACT_ENDPOINT` | Nova Act endpoint override | — |
 | `LOG_LEVEL` | Log level | `INFO` |
+| `API_KEY` | Optional. When set, all `/api/*` requests require `X-API-Key` header; 401 if missing or wrong. Unset = no check. | — |
 | `CORS_ALLOW_ORIGINS` | Comma-separated origins for CORS (e.g. CloudFront URL). If unset, localhost + dev origins only. | — |
 
 For **real** inference (`NOVA_MODE=real`), the backend uses **Amazon Bedrock** (Nova 2 Lite). Configure AWS credentials (e.g. `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or an IAM role); no separate API key is required for Bedrock.
@@ -185,11 +186,16 @@ For a **Terraform-defined** stack (ECR, App Runner, S3, CloudFront), see **[infr
 
 **Acceptance:** Backend container runs locally with Docker and `/api/health` works; frontend build with `VITE_API_BASE` works against the deployed backend.
 
+## Blog post
+
+- **Submission / blog:** [AWS Builder Experience](https://builder.aws.com) or your submission URL (placeholder – add link when published).
+
 ## Documentation
 
 - [Architecture](docs/architecture.md) – mermaid diagrams, components, and configuration.
 - [Demo script (3 min)](docs/demo-script.md) – narration for judges.
 - [Judges notes](docs/judges-notes.md) – Nova services, mocked vs real, how to run demo.
+- [Screenshots guide](docs/screenshots/README.md) – which screenshots to capture for submission.
 - [Backend README](backend/README.md) – backend-specific setup and endpoints.
 
 ## License

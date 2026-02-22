@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     nova_act_starting_page: str = "https://expense.corp.example.com/dashboard"
     nova_act_headless: bool = False
 
+    # Optional API key: when set, require X-API-Key header on /api/* (401 if missing or wrong)
+    api_key: str = ""
+
     # Logging
     log_level: str = "INFO"
 
