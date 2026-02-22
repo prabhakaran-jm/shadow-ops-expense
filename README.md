@@ -1,7 +1,7 @@
 # Shadow Ops – Expense Report Shadow
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Node 18+](https://img.shields.io/badge/Node-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://react.dev/)
@@ -199,7 +199,6 @@ For a **Terraform-defined** stack (ECR, App Runner, S3, CloudFront), see **[infr
 ## Documentation
 
 - [Architecture](docs/architecture.md) – mermaid diagrams, components, and configuration.
-- [Demo script (3 min)](docs/demo-script.md) – narration for judges.
 - [Judges notes](docs/judges-notes.md) – Nova services, mocked vs real, how to run demo.
 - [Screenshots guide](docs/screenshots/README.md) – which screenshots to capture for submission.
 - [Backend README](backend/README.md) – backend-specific setup and endpoints.
