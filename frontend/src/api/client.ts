@@ -87,12 +87,38 @@ export async function generateAgent(sessionId: string): Promise<Record<string, u
   })
 }
 
+async function pollRunResult(
+  sessionId: string,
+  runId: string,
+  onTick?: () => void,
+  maxWaitMs = 5 * 60 * 1000,
+  intervalMs = 3000,
+): Promise<ExecutionResult> {
+  const deadline = Date.now() + maxWaitMs
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, intervalMs))
+    onTick?.()
+    const res = await request<ExecutionResult & { status: string }>(
+      `/agents/${sessionId}/run/${runId}`,
+    )
+    if (res.status !== 'running') return res as ExecutionResult
+  }
+  throw new Error('Agent execution timed out (5 min). Check server logs for status.')
+}
+
 export async function runAgent(
   sessionId: string,
-  body: AgentRunRequest
+  body: AgentRunRequest,
+  onPollTick?: () => void,
 ): Promise<ExecutionResult> {
-  return request<ExecutionResult>(`/agents/${sessionId}/run`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
+  const res = await request<ExecutionResult & { run_id?: string; status: string }>(
+    `/agents/${sessionId}/run`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+  // If backend returned 'running', it's async — poll for result
+  if (res.status === 'running' && res.run_id) {
+    return pollRunResult(sessionId, res.run_id, onPollTick)
+  }
+  // Sync result (mock mode or simulate)
+  return res as ExecutionResult
 }

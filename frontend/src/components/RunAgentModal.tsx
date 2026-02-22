@@ -17,12 +17,17 @@ export default function RunAgentModal({ sessionId, onClose, onSuccess }: Props) 
   const [receiptFile, setReceiptFile] = useState('')
   const [simulateUiChange, setSimulateUiChange] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [statusMsg, setStatusMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
+    setElapsed(0)
+    setStatusMsg('Launching agent…')
+    const timer = setInterval(() => setElapsed((t) => t + 1), 1000)
     try {
       const body: AgentRunRequest = {
         parameters: {
@@ -34,13 +39,17 @@ export default function RunAgentModal({ sessionId, onClose, onSuccess }: Props) 
         },
         simulate_ui_change: simulateUiChange,
       }
-      const result = await runAgent(sessionId, body)
+      const result = await runAgent(sessionId, body, () => {
+        setStatusMsg('Nova Act executing… polling for result')
+      })
       onSuccess(result)
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Run failed')
     } finally {
+      clearInterval(timer)
       setSubmitting(false)
+      setStatusMsg('')
     }
   }
 
@@ -130,7 +139,7 @@ export default function RunAgentModal({ sessionId, onClose, onSuccess }: Props) 
               Cancel
             </button>
             <button type="submit" className={styles.buttonPrimary} disabled={submitting}>
-              {submitting ? 'Running…' : 'Run'}
+              {submitting ? `${statusMsg} ${elapsed}s` : 'Run'}
             </button>
           </div>
         </form>

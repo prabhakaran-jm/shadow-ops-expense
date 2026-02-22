@@ -59,17 +59,41 @@ def _is_submit_step(intent: str, instruction: str) -> bool:
     return "submit" in intent_lower or "submit" in instruction_lower
 
 
+def _detect_name_param(client, operation: str) -> str:
+    """Detect the workflow definition name parameter for a given operation.
+
+    The nova-act boto3 service model is inconsistent across operations and versions:
+    - CreateWorkflowDefinition may use 'name' or 'workflowDefinitionName'
+    - GetWorkflowDefinition may use 'workflowDefinitionName' or 'name'
+    This introspects the actual service model to pick the right one.
+    """
+    try:
+        op = client._service_model.operation_model(operation)
+        members = list(op.input_shape.members.keys())
+        if "workflowDefinitionName" in members:
+            return "workflowDefinitionName"
+        if "name" in members:
+            return "name"
+    except Exception:
+        pass
+    return "name"
+
+
 def _ensure_workflow_definition() -> None:
     """Create the Nova Act workflow definition if it does not exist (idempotent)."""
     import boto3
 
     client = boto3.client("nova-act", region_name=settings.aws_region)
+    get_key = _detect_name_param(client, "GetWorkflowDefinition")
+    create_key = _detect_name_param(client, "CreateWorkflowDefinition")
+    logger.info("workflow_definition_params", get_key=get_key, create_key=create_key)
+
     try:
-        client.get_workflow_definition(name=_WORKFLOW_DEFINITION_NAME)
+        client.get_workflow_definition(**{get_key: _WORKFLOW_DEFINITION_NAME})
         logger.info("workflow_definition_exists", name=_WORKFLOW_DEFINITION_NAME)
     except client.exceptions.ResourceNotFoundException:
         client.create_workflow_definition(
-            name=_WORKFLOW_DEFINITION_NAME,
+            **{create_key: _WORKFLOW_DEFINITION_NAME},
             description="Shadow Ops expense workflow automation agent",
         )
         logger.info("workflow_definition_created", name=_WORKFLOW_DEFINITION_NAME)
