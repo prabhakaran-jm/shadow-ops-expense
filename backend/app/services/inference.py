@@ -257,7 +257,7 @@ def infer_workflow(session: CaptureSession) -> InferredWorkflow:
     Mode is controlled by env NOVA_MODE: mock (default) or real.
     - mock: deterministic workflow with parameters (amount, date, category, description, receipt_file)
       and steps (navigate, new expense, upload receipt, fill fields, submit, confirmation).
-    - real: reserved for Nova 2 Lite; currently raises NotImplementedError.
+    - real: calls Nova 2 Lite via Bedrock to infer workflow from session context.
     """
     mode = (settings.nova_mode or "mock").strip().lower()
     if mode == "real":

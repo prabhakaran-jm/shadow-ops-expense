@@ -1,14 +1,14 @@
 # Shadow Ops – Expense Report Shadow
 
-AI-powered web application that infers expense submission workflows from user behavior (or prompts) and runs them via **Amazon Nova 2 Lite** (inference) and **Nova Act** (agent execution).
+AI-powered expense automation that combines **Amazon Nova 2 Lite** (multimodal receipt OCR + workflow inference via Bedrock) with **Amazon Nova Act** (cloud browser automation) to turn a receipt photo into a fully automated expense submission.
 
 ## Features by category
 
 | Category | Features |
 |----------|----------|
-| **Agentic AI** | Workflow inference from capture sessions; human approval gate; agent generation from approved workflow; parameterized execution with run log and confirmation ID; UI-change adaptation simulation (failure → recovery → retry). |
-| **UI Automation** | Inferred steps (navigate, open form, upload receipt, fill fields, submit, confirmation); execution run log; mock agent that simulates step-by-step automation and adapts when UI text changes (e.g. Submit → Confirm). |
-| **Multimodal** | Capture session model supports `screenshot_path` and field labels per step; schema and prompts ready for vision/screenshot input in Nova 2 Lite inference (extension point). |
+| **Agentic AI** | Workflow inference from receipt images; human-in-the-loop approval gate; agent generation from approved workflow; parameterized execution with run log and confirmation ID; self-healing UI-change adaptation (failure → detection → retry). |
+| **UI Automation** | Nova Act cloud browser fills real expense forms: types amounts, sets dates, selects categories, clicks Submit, clicks Confirm. Instruction enhancement adapts generic inferred steps to specific page layout. Async execution with live polling. |
+| **Multimodal** | Nova 2 Lite multimodal extracts amount, merchant, date, category, currency from receipt photos. Same model infers structured workflows from extracted data. |
 
 ## Screenshots
 
@@ -85,15 +85,12 @@ Copy `backend/.env.example` to `backend/.env`. Key variables:
 | `HOST` | Server bind host | `0.0.0.0` |
 | `PORT` | Server port | `8000` |
 | `DEBUG` | Debug mode | `false` |
-| `NOVA_MODE` | Inference mode: `mock` or `real` | `mock` |
-| `AWS_REGION` | AWS region for Bedrock (real mode) | `us-east-1` |
-| `NOVA_MODEL_ID_LITE` | Bedrock inference profile ID for Nova 2 Lite (optional) | `us.amazon.nova-2-lite-v1:0` |
-| `NOVA_2_LITE_API_KEY` | Nova 2 Lite API key (real mode) | — |
-| `NOVA_2_LITE_REGION` | Nova 2 Lite region | `us-east-1` |
-| `NOVA_2_LITE_ENDPOINT` | Nova 2 Lite endpoint override | — |
-| `NOVA_ACT_API_KEY` | Nova Act API key (real mode) | — |
-| `NOVA_ACT_REGION` | Nova Act region | `us-east-1` |
-| `NOVA_ACT_ENDPOINT` | Nova Act endpoint override | — |
+| `NOVA_MODE` | Inference mode: `mock` or `real` (Nova 2 Lite via Bedrock) | `mock` |
+| `AWS_REGION` | AWS region for Bedrock and Nova Act | `us-east-1` |
+| `NOVA_MODEL_ID_LITE` | Bedrock model ID for Nova 2 Lite | `us.amazon.nova-2-lite-v1:0` |
+| `NOVA_ACT_MODE` | Agent mode: `mock` or `real` (Nova Act SDK) | `mock` |
+| `NOVA_ACT_STARTING_PAGE` | URL Nova Act opens in cloud browser | — |
+| `NOVA_ACT_HEADLESS` | Run cloud browser headless | `true` |
 | `LOG_LEVEL` | Log level | `INFO` |
 | `API_KEY` | Optional. When set, all `/api/*` requests require `X-API-Key` header; 401 if missing or wrong. Unset = no check. | — |
 | `CORS_ALLOW_ORIGINS` | Comma-separated origins for CORS (e.g. CloudFront URL). If unset, localhost + dev origins only. | — |
@@ -173,7 +170,8 @@ The script:
 | GET    | `/api/workflows/{session_id}` | Get workflow detail |
 | POST   | `/api/workflows/{session_id}/approve` | Approve workflow |
 | POST   | `/api/agents/{session_id}/generate` | Generate agent from workflow |
-| POST   | `/api/agents/{session_id}/run` | Run agent with parameters (mock today; Nova Act when integrated) |
+| POST   | `/api/agents/{session_id}/run` | Run agent with parameters (mock or real Nova Act cloud browser) |
+| GET    | `/api/agents/{session_id}/run/{run_id}` | Poll async agent run status (real Nova Act mode) |
 
 ## Deploy on AWS (App Runner + S3/CloudFront)
 

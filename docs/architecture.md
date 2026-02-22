@@ -2,62 +2,73 @@
 
 ## Overview
 
-**Shadow Ops – Expense Report Shadow** infers expense submission workflows from captured user sessions (or prompts) and runs them as automated agents. It is designed to integrate with **Amazon Nova 2 Lite** (workflow inference) and **Amazon Nova Act** (agent execution); the current implementation uses deterministic mocks for both.
+**Shadow Ops – Expense Report Shadow** automates expense submission by combining **Amazon Nova 2 Lite** (receipt OCR + workflow inference via Bedrock) with **Amazon Nova Act** (cloud browser automation). Upload a receipt photo, and the system extracts fields, infers a workflow, and executes it in a real browser — filling forms, clicking buttons, and returning a confirmation ID.
 
 ## High-level flow
 
 ```mermaid
 flowchart LR
   subgraph Input
-    A[Capture Session] --> B[Infer Workflow]
+    A[Receipt Photo] --> B[Nova 2 Lite OCR]
+    B --> C[Nova 2 Lite Inference]
   end
   subgraph Review
-    B --> C[Approve]
-    C --> D[Generate Agent]
+    C --> D[Human Approval]
+    D --> E[Generate Agent]
   end
   subgraph Execution
-    D --> E[Run Agent]
-    E --> F[Confirmation]
+    E --> F[Nova Act Cloud Browser]
+    F --> G[Confirmation ID]
   end
 ```
 
-1. **Capture** – User actions are recorded as a capture session (steps, URLs, field labels, optional screenshots).
-2. **Infer** – Backend infers a structured workflow (title, parameters, steps, risk) from the session; extension point for Nova 2 Lite.
-3. **Approve** – Human reviews and approves the workflow on the dashboard.
-4. **Generate Agent** – Approved workflow is turned into an agent spec (parameter schema, steps); extension point for Nova Act.
-5. **Run** – Agent runs with supplied parameters; mock supports a UI-change simulation (failure at Submit → recovery → retry with Confirm).
-6. **Confirmation** – Run returns a confirmation ID and step-by-step run log.
+1. **Upload** – User uploads a receipt photo via the dashboard.
+2. **Extract** – Nova 2 Lite multimodal extracts amount, merchant, date, category, currency from the image.
+3. **Infer** – Nova 2 Lite infers a structured workflow (title, parameters, steps, risk, time saved) from the extracted data.
+4. **Approve** – Human reviews and approves the workflow on the dashboard.
+5. **Generate Agent** – Approved workflow is turned into an agent spec with parameter schema and execution steps.
+6. **Execute** – Nova Act opens a cloud browser on the target expense form, fills fields, submits, confirms, and extracts the confirmation ID using `act_get()`.
 
 ## Component diagram
 
 ```mermaid
 flowchart TB
-  subgraph Frontend["Frontend (React + Vite)"]
+  subgraph Frontend["Frontend (React + Vite + TypeScript)"]
     UI[Dashboard]
-    UI --> |list / select| WF[Workflow list & detail]
-    UI --> |approve / generate / run| API_CALL[API client]
+    UI --> |upload receipt| RECEIPT[Receipt Upload]
+    UI --> |approve / generate / run| API_CALL[API Client + Polling]
   end
 
-  subgraph Backend["Backend (FastAPI)"]
+  subgraph Backend["Backend (FastAPI on App Runner)"]
     ROUTES[Routes]
-    ROUTES --> CAP[capture sessions]
-    ROUTES --> INFER[infer workflow]
-    ROUTES --> WF_API[workflows review]
-    ROUTES --> AGENTS[agents generate/run]
-    INFER --> MOCK_INFER[Inference mock / Nova 2 Lite]
-    AGENTS --> MOCK_ACT[ActClientMock / Nova Act]
+    ROUTES --> REC[Receipt Parser]
+    ROUTES --> INFER[Workflow Inference]
+    ROUTES --> WF_API[Workflow Review]
+    ROUTES --> AGENTS[Agent Generate/Run]
+    REC --> NOVA_MM[Nova 2 Lite Multimodal via Bedrock]
+    INFER --> NOVA_TXT[Nova 2 Lite Text via Bedrock]
+    AGENTS --> ACT[Nova Act SDK + Workflow/IAM]
+  end
+
+  subgraph AWS["AWS Infrastructure (Terraform)"]
+    ECR[ECR] --> APPRUNNER[App Runner]
+    S3[S3] --> CF[CloudFront]
+    IAM[IAM Roles] --> APPRUNNER
+    BEDROCK[Bedrock] --> NOVA_MM
+    BEDROCK --> NOVA_TXT
+    NOVAACT_SVC[Nova Act Service] --> ACT
   end
 
   subgraph Storage["Demo storage (disk)"]
-    SESS[demo/sessions]
-    WF_STORE[demo/workflows]
-    APPR[demo/approvals]
-    AG_SPEC[demo/agents]
-    RUNS[demo/runs]
+    SESS[sessions/]
+    WF_STORE[workflows/]
+    APPR[approvals/]
+    AG_SPEC[agents/]
+    RUNS[runs/]
   end
 
   API_CALL --> ROUTES
-  CAP --> SESS
+  REC --> SESS
   INFER --> WF_STORE
   WF_API --> WF_STORE
   WF_API --> APPR
@@ -69,29 +80,25 @@ flowchart TB
 
 | Component | Description |
 |-----------|-------------|
-| **Dashboard** | React SPA: workflow list, detail (title, description, parameters, steps), Approve, Generate Agent, Run Agent with parameter form and run-log results. Highlights UI-change adaptation in the log when simulation is used. |
-| **API (FastAPI)** | REST endpoints for capture, infer, workflows (list/get/approve), agents (generate/run), health, and schema examples. |
-| **Capture** | POST/GET capture sessions; validates steps (non-empty, max 200); persists JSON under `demo/sessions/`. |
-| **Inference** | POST infer by session_id; loads session, runs inference (mock or Nova 2 Lite stub), stores workflow under `demo/workflows/`. Mock returns fixed parameters (amount, date, category, description, receipt_file) and steps (navigate, open form, upload receipt, fill, submit, confirmation). |
-| **Workflows** | List workflows, get by id, POST approve (stores `demo/approvals/{id}.json`). |
-| **Agents** | POST generate (requires approval; creates agent spec, stores `demo/agents/{id}.agent.json`). POST run (loads spec, runs mock, stores `demo/runs/{run_id}.json`; optional simulate_ui_change injects failure/recovery at Submit step). |
-| **ActClientMock** | Creates agent spec from workflow; run_agent produces run_log and confirmation_id (e.g. EXP-2026-000123). When simulate_ui_change is true, injects “Step N failed”, “UI changed: Submit renamed to Confirm”, and “Step N retry”. |
+| **Dashboard** | React SPA: receipt upload with drag-and-drop, workflow list/detail, Approve, Generate Agent, Run Agent with parameter form, live polling timer, run log with highlighted adaptation lines. |
+| **Receipt Parser** | Multimodal Nova 2 Lite call extracts structured fields from receipt images. Mock returns fixed data for local dev. |
+| **Workflow Inference** | Nova 2 Lite text call infers workflow from session context. Includes JSON parsing with retry, markdown fence stripping, and brace-matching extraction. |
+| **Agent Execution** | `ActClientReal`: Nova Act SDK with Workflow/IAM auth. Skips navigate/open_form steps (browser already on target page). Enhances instructions with page-specific context. Retries submit/confirm steps. Extracts confirmation ID via `act_get()`. |
+| **Async Pattern** | Real Nova Act runs in background thread. POST /run returns `{status: "running", run_id}` immediately. Frontend polls GET /run/{run_id} every 3s with live timer. Avoids App Runner 120s timeout. |
+| **Self-healing** | When a UI element changes (e.g. Submit becomes Confirm), agent detects failure, adapts instruction, and retries. Demonstrated in both mock (simulate_ui_change) and real (retry logic) modes. |
 
 ## Configuration
 
-- **Backend** – `.env` in `backend/` (see `.env.example`). Key settings: `NOVA_MODE` (mock|real), Nova API keys and endpoints for future real integration.
-- **Frontend** – Optional `VITE_API_BASE`; dev server proxies `/api` to `http://localhost:8000` by default.
+- **Backend** – `.env` (see `.env.example`). Key settings: `NOVA_MODE` (mock/real), `NOVA_ACT_MODE` (mock/real), `AWS_REGION`, `NOVA_ACT_STARTING_PAGE`.
+- **Frontend** – `VITE_API_BASE` for production; dev server proxies `/api` to localhost:8000.
+- **Infrastructure** – Terraform in `infra/`. Deploy script `infra/deploy.sh` handles full stack deployment.
 
-## Project layout
+## Deployment
 
-```
-shadow-ops-expense/
-├── backend/          # FastAPI app, config, logging, Nova placeholders
-│   ├── app/          # routes, services, models
-│   ├── prompts/     # Prompt templates (inference_prompt.txt, receipt_extraction_prompt.txt)
-│   └── scripts/     # demo_flow.py
-├── frontend/         # React app, dashboard, API client
-├── demo/             # Sessions, workflows, approvals, agents, runs, sample_logs
-├── docs/             # Architecture, demo script, judges notes
-└── README.md
-```
+| Component | AWS Service | Config |
+|-----------|------------|--------|
+| Backend | App Runner | ECR image, 4096 MB, env vars for real mode |
+| Frontend | S3 + CloudFront | OAC, private bucket, SPA routing |
+| Registry | ECR | Python 3.12-slim Docker image |
+| Permissions | IAM | `bedrock:InvokeModel` + `nova-act:*` |
+| IaC | Terraform | `infra/` directory, two-phase apply |

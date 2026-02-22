@@ -2,85 +2,101 @@
 
 ## Amazon Nova services used
 
-| Service | Intended role | Current integration |
-|--------|----------------|----------------------|
-| **Amazon Nova 2 Lite** | Workflow inference: turn a capture session (or prompt) into a structured workflow (title, description, parameters, steps, risk, time saved). | **Stub only.** Extension point in `backend/app/services/inference.py`: `NOVA_MODE=real` raises `NotImplementedError` with a clear message. No API calls. |
-| **Amazon Nova Act** | Agent execution: create an agent from an approved workflow and run it with parameters. | **Stub only.** Mock in `backend/app/services/act_client.py`: `ActClientMock` creates agent specs and runs with deterministic run_log and confirmation_id. No Nova Act API calls. |
-
-Both services are **designed in** (config, env vars, docstrings) and **called via** clear extension points; the app is fully runnable in mock mode for judging.
+| Service | Role | Integration status |
+|--------|------|-------------------|
+| **Amazon Nova 2 Lite** (Bedrock) | 1. **Receipt OCR**: Multimodal image+text call extracts amount, merchant, date, category, currency from receipt photos. 2. **Workflow inference**: Text call turns a capture session into a structured workflow (title, parameters, steps, risk, time saved). | **Fully implemented and deployed.** `backend/app/services/nova_client.py` calls Bedrock (`bedrock-runtime`) with model `amazon.nova-2-lite-v1:0`. Works in both text and multimodal modes. Prompts in `backend/prompts/`. |
+| **Amazon Nova Act** | Cloud browser automation: opens a headless Chromium session on the target expense form, fills fields, selects dropdowns, clicks Submit, clicks Confirm, and extracts the confirmation ID from the success banner. | **Fully implemented and deployed.** `backend/app/services/act_client.py` uses the `nova-act` SDK with `Workflow` context manager (IAM auth, no API key). Cloud browser runs in App Runner. Step skipping, instruction enhancement, and `act_get()` for result extraction. |
 
 ---
 
-## What is mocked vs real
+## What is real vs mocked
 
-- **Real (implemented and working):**
-  - Capture session storage (POST/GET, disk under `demo/sessions/`).
-  - Workflow inference **mock**: deterministic workflow from session (fixed parameters and steps).
-  - Workflow review APIs (list, get, approve) and persistence (`demo/workflows/`, `demo/approvals/`).
-  - Agent generation **mock**: agent spec built from workflow, stored under `demo/agents/`.
-  - Agent execution **mock**: run_log and confirmation_id (e.g. EXP-2026-000123); optional UI-change simulation (failure at Submit → “UI changed: Submit renamed to Confirm” → retry).
-  - Full React dashboard: workflow list, detail, Approve, Generate Agent, Run Agent (form + results with highlighted adaptation).
-  - Demo script: end-to-end flow from CLI.
+The system supports two modes controlled by environment variables. **Both modes are fully implemented and working.**
 
-- **Mocked (no Nova API calls):**
-  - Nova 2 Lite inference: `NOVA_MODE=mock` (default) returns a fixed InferredWorkflow; `NOVA_MODE=real` raises `NotImplementedError`.
-  - Nova Act: `ActClientMock` only; no real agent runtime.
+### Real mode (`NOVA_MODE=real`, `NOVA_ACT_MODE=real`) — Deployed on AWS
+
+| Feature | Implementation |
+|---------|---------------|
+| Receipt extraction | Nova 2 Lite multimodal via Bedrock. Extracts amount, merchant, date, category, currency, confidence. |
+| Workflow inference | Nova 2 Lite text via Bedrock. Infers title, description, parameters, steps, risk_level, time_saved_minutes from capture session. |
+| Workflow approval | Human-in-the-loop approval gate (stored to disk). |
+| Agent generation | Builds `ActAgentSpec` from approved workflow (parameter schema + steps). |
+| Agent execution | Nova Act SDK with Workflow/IAM auth. Cloud browser navigates to expense form, fills fields, submits, confirms. Background thread + polling (avoids App Runner 120s timeout). |
+| Confirmation extraction | `act_get()` reads confirmation ID from the page's success banner. |
+
+### Mock mode (`NOVA_MODE=mock`, `NOVA_ACT_MODE=mock`) — Local development
+
+- Deterministic responses for all services (no AWS calls needed).
+- Mock receipt extraction returns fixed fields.
+- Mock inference returns a fixed 6-step workflow.
+- Mock agent execution returns a step-by-step run log with confirmation ID.
+- Optional `simulate_ui_change` flag demonstrates self-healing: step fails at Submit, detects UI changed (Submit renamed to Confirm), retries with adapted instruction.
+
+---
+
+## Deployment architecture
+
+| Component | AWS Service | Details |
+|-----------|------------|---------|
+| Backend API | **App Runner** | FastAPI container from ECR. 4096 MB memory. Env vars for real Nova mode. |
+| Frontend | **S3 + CloudFront** | React SPA with OAC (private bucket). SPA routing via custom error responses. |
+| Container registry | **ECR** | Backend Docker image (Python 3.12-slim). |
+| Infrastructure | **Terraform** | All resources defined in `infra/`. Two-phase apply (ECR first, then App Runner). |
+| IAM | **IAM roles** | App Runner instance role with `bedrock:InvokeModel` + `nova-act:*` permissions. |
 
 ---
 
 ## How to run the demo
 
-### Prerequisites
+### Option A – Deployed (Real Nova Mode)
 
-- Python 3.11+ (backend), Node.js 18+ (frontend).
-- Backend: `cd backend && pip install -r requirements.txt && cp .env.example .env` (optional: set `NOVA_MODE=mock` explicitly).
-- Frontend: `cd frontend && npm install`.
+The app is deployed and live:
+- **Frontend**: `https://ducl3aq6jplo1.cloudfront.net`
+- **Backend**: App Runner (auto-scales, accessed via CloudFront or direct)
 
-### Option A – UI demo
+Steps:
+1. Open the frontend URL.
+2. Upload a receipt image (any expense receipt photo).
+3. Nova 2 Lite extracts fields and infers a workflow (~8 seconds total).
+4. Click **Approve** to approve the workflow.
+5. Click **Generate Agent** to create the agent spec.
+6. Click **Run Agent**, fill in the parameters, click **Run**.
+7. Nova Act opens a cloud browser, fills the expense form, submits it, and returns a confirmation ID (~2-4 minutes).
+8. The run log shows each step with timing and sub-step counts.
 
-1. **Start backend** (Terminal 1):
-   ```bash
-   cd backend
-   .venv\Scripts\activate   # or source .venv/bin/activate
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
+### Option B – Local (Mock Mode)
 
-2. **Start frontend** (Terminal 2):
-   ```bash
-   cd frontend
-   npm run dev
-   ```
+1. **Start backend**: `cd backend && .venv\Scripts\activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
+2. **Start frontend**: `cd frontend && npm run dev`
+3. **Seed data**: `python backend/scripts/demo_flow.py`
+4. Open http://localhost:5173 and follow the same flow as above (instant mock responses).
 
-3. **Seed data (one-time):** From project root:
-   ```bash
-   python backend/scripts/demo_flow.py
-   ```
-   This creates a session, infers a workflow, approves it, generates an agent, and runs it once. Output includes `confirmation_id` and `run_id`.
+### Option C – CLI demo
 
-4. **Open dashboard:** http://localhost:5173  
-   - Select the workflow “Submit expense (inferred)” (or the only one in the list).  
-   - Show detail, Approve (if not already), Generate Agent, then Run Agent.  
-   - Run once without “Simulate UI change,” then once with it and point out the highlighted adaptation lines in the run log.
+```bash
+python backend/scripts/demo_flow.py
+```
 
-### Option B – CLI-only quick demo
+---
 
-1. Start the backend only (as above).
-2. From project root:
-   ```bash
-   python backend/scripts/demo_flow.py
-   ```
-3. Confirm output shows `confirmation_id` and `run_id`.
+## Key technical highlights for judges
 
-To use another host/port: `DEMO_BASE_URL=http://localhost:8000/api python backend/scripts/demo_flow.py`.
+1. **Dual Nova integration**: Uses BOTH Nova 2 Lite (multimodal OCR + workflow inference) AND Nova Act (cloud browser automation) — the full Nova ecosystem.
 
-### API docs
+2. **Receipt-to-automation pipeline**: Upload a receipt photo → AI extracts fields → AI infers a workflow → human approves → AI agent fills the actual form in a real browser → confirmation ID extracted. End-to-end automation from a single image.
 
-- Swagger UI: http://localhost:8000/docs  
-- Health: http://localhost:8000/api/health  
+3. **Self-healing agent**: When a UI element changes (e.g. "Submit" renamed to "Confirm"), the agent detects the failure, adapts its instruction, and retries. Demonstrated in both mock (simulate_ui_change) and real (retry logic in ActClientReal) modes.
+
+4. **Instruction enhancement**: Generic inferred workflow steps are automatically enhanced with page-specific context before execution (e.g. "Fill amount" becomes `Set the "Amount ($)" number input to "125.50"`).
+
+5. **Async execution pattern**: Real Nova Act takes 2-4 minutes. Backend returns immediately with a run_id, frontend polls every 3 seconds with a live timer. Works within App Runner's 120-second request timeout.
+
+6. **Production-grade**: Pydantic v2 models, structlog JSON logging, Terraform IaC, Docker, CORS, API key middleware, health checks, retry logic, graceful fallbacks.
 
 ### Suggested talking points
 
-- **Agentic AI:** Human-in-the-loop (approve workflow) then automated agent (generate + run with parameters).
-- **UI Automation:** Inferred steps (navigate, fill, submit, etc.); run_log reflects automation; UI-change simulation shows adaptation when “Submit” becomes “Confirm.”
-- **Self-healing:** The **Simulate UI change** option demonstrates the *concept* of self-healing: a step fails (e.g. element not found), the system detects a UI change (e.g. "Submit" renamed to "Confirm"), and the run log shows a retry with the updated instruction. In real Nova Act mode, the agent handles actual DOM changes in the browser.
-- **Multimodal:** Capture session supports `screenshot_path` and field labels; inference prompt and schema support future use of screenshots/vision (Nova 2 Lite extension).
+- **Agentic AI**: Human-in-the-loop approval then fully automated agent execution with parameters.
+- **UI Automation**: Nova Act fills real forms in a cloud browser — not just mock outputs.
+- **Multimodal**: Receipt photo → structured data via Nova 2 Lite multimodal.
+- **Self-healing**: Agent adapts when UI elements change (failure → detection → retry).
+- **Enterprise impact**: Expense reporting is a universal enterprise pain point; this automates it end-to-end.

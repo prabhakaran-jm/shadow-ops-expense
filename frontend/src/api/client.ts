@@ -1,10 +1,7 @@
 import type {
   AgentRunRequest,
-  ExecuteRequest,
   ExecutionResult,
   HealthResponse,
-  InferRequest,
-  InferredWorkflow,
   ReceiptExtractionResult,
   WorkflowDetail,
   WorkflowListItem,
@@ -51,20 +48,6 @@ export async function uploadReceipt(file: File): Promise<ReceiptExtractionResult
     throw new Error(message)
   }
   return res.json() as Promise<ReceiptExtractionResult>
-}
-
-export async function inferWorkflow(body: InferRequest): Promise<InferredWorkflow> {
-  return request<InferredWorkflow>('/workflow/infer', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-}
-
-export async function executeAgent(body: ExecuteRequest): Promise<{ run_id: string; status: string }> {
-  return request('/agent/execute', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
 }
 
 export async function getWorkflows(): Promise<WorkflowListItem[]> {
