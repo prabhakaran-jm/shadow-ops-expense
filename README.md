@@ -1,5 +1,13 @@
 # Shadow Ops – Expense Report Shadow
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Node 18+](https://img.shields.io/badge/Node-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![AWS Nova](https://img.shields.io/badge/AWS-Nova%202%20Lite%20%2B%20Act-FF9900?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+
 AI-powered expense automation that combines **Amazon Nova 2 Lite** (multimodal receipt OCR + workflow inference via Bedrock) with **Amazon Nova Act** (cloud browser automation) to turn a receipt photo into a fully automated expense submission.
 
 ## Features by category
